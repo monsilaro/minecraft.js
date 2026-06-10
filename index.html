@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="fr">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Minecraft-ish</title>
+        <style>
+            html,
+            body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                height: 100%;
+                overflow: hidden;
+                background: #000;
+            }
+            canvas {
+                display: block;
+            }
+            #hud {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                font-family: 'Segoe UI', monospace;
+                user-select: none;
+            }
+            .hidden {
+                display: none !important;
+            }
+
+            #crosshair {
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 20px;
+                height: 20px;
+                transform: translate(-50%, -50%);
+                mix-blend-mode: difference;
+            }
+            #crosshair::before,
+            #crosshair::after {
+                content: '';
+                position: absolute;
+                background: #fff;
+            }
+            #crosshair::before {
+                left: 9px;
+                top: 0;
+                width: 2px;
+                height: 20px;
+            }
+            #crosshair::after {
+                left: 0;
+                top: 9px;
+                width: 20px;
+                height: 2px;
+            }
+
+            #debug {
+                position: absolute;
+                left: 8px;
+                top: 8px;
+                color: #fff;
+                font-size: 13px;
+                text-shadow: 1px 1px 0 #000;
+                white-space: pre;
+                line-height: 1.4;
+            }
+
+            /* stats bar: hearts / hunger / bubbles */
+            #stats {
+                position: absolute;
+                bottom: 72px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 364px;
+                height: 60px;
+                image-rendering: pixelated;
+            }
+
+            #hotbar {
+                position: absolute;
+                bottom: 12px;
+                left: 50%;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 4px;
+                padding: 4px;
+                background: rgba(0, 0, 0, 0.35);
+                border: 2px solid rgba(0, 0, 0, 0.5);
+                border-radius: 4px;
+            }
+            .slot {
+                width: 48px;
+                height: 48px;
+                background: rgba(255, 255, 255, 0.08);
+                border: 2px solid #555;
+                box-sizing: border-box;
+                position: relative;
+            }
+            .slot.selected {
+                border-color: #fff;
+                box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+            }
+            .slot .icon {
+                width: 100%;
+                height: 100%;
+                image-rendering: pixelated;
+                display: block;
+            }
+            .slot .num {
+                position: absolute;
+                left: 3px;
+                top: 1px;
+                color: #ddd;
+                font-size: 10px;
+                text-shadow: 1px 1px 0 #000;
+                z-index: 1;
+            }
+            .slot .count {
+                position: absolute;
+                right: 3px;
+                bottom: 1px;
+                color: #fff;
+                font-size: 13px;
+                font-weight: bold;
+                text-shadow: 1px 1px 0 #000;
+                z-index: 1;
+            }
+            .slot .dur {
+                position: absolute;
+                left: 4px;
+                bottom: 4px;
+                height: 3px;
+                width: 80%;
+                background: #5dd35d;
+                display: none;
+                z-index: 1;
+            }
+
+            #blockname {
+                position: absolute;
+                bottom: 132px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: #fff;
+                font-size: 16px;
+                text-shadow: 1px 1px 0 #000;
+                opacity: 0;
+                transition: opacity 0.5s;
+                transition-delay: 1s;
+            }
+            #blockname.show {
+                opacity: 1;
+                transition: none;
+            }
+
+            #vignette {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                opacity: 0;
+                background: radial-gradient(
+                    ellipse at center,
+                    transparent 40%,
+                    rgba(200, 0, 0, 0.55) 100%
+                );
+            }
+            #vignette.flash {
+                animation: dmg 0.45s ease-out;
+            }
+            @keyframes dmg {
+                0% {
+                    opacity: 1;
+                }
+                100% {
+                    opacity: 0;
+                }
+            }
+
+            /* inventory + recipe book */
+            #inventory {
+                position: fixed;
+                left: 50%;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                display: flex;
+                gap: 14px;
+                padding: 14px;
+                background: rgba(25, 25, 30, 0.92);
+                border: 3px solid #555;
+                border-radius: 6px;
+                pointer-events: auto;
+                font-family: 'Segoe UI', monospace;
+                z-index: 20;
+            }
+            #inventory h3 {
+                margin: 0 0 8px;
+                color: #eee;
+                font-size: 14px;
+            }
+            #invmain {
+                display: grid;
+                grid-template-columns: repeat(9, 44px);
+                gap: 3px;
+                margin-bottom: 10px;
+            }
+            #invhotbar {
+                display: grid;
+                grid-template-columns: repeat(9, 44px);
+                gap: 3px;
+            }
+            #invarmor {
+                display: grid;
+                grid-template-rows: repeat(4, 44px);
+                gap: 3px;
+            }
+            .armorslot:empty::after,
+            .armorslot::before {
+                content: attr(data-ph);
+                position: absolute;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                opacity: 0.25;
+                pointer-events: none;
+            }
+            .armorslot .icon {
+                position: relative;
+                z-index: 1;
+            }
+            #inventory .slot {
+                width: 44px;
+                height: 44px;
+                cursor: pointer;
+            }
+            #recipes {
+                width: 280px;
+                max-height: 320px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .recipe {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 5px 7px;
+                background: rgba(255, 255, 255, 0.07);
+                border: 1px solid #555;
+                border-radius: 3px;
+                cursor: pointer;
+                color: #eee;
+            }
+            .recipe:hover {
+                background: rgba(255, 255, 255, 0.16);
+            }
+            .recipe.locked {
+                opacity: 0.4;
+                cursor: default;
+            }
+            .recipe canvas {
+                width: 28px;
+                height: 28px;
+                image-rendering: pixelated;
+                flex: none;
+            }
+            .rlabel {
+                font-size: 12px;
+                line-height: 1.25;
+            }
+            .rlabel b {
+                display: block;
+                font-size: 13px;
+            }
+            .rlabel span {
+                color: #aaa;
+            }
+
+            #cursorstack {
+                position: fixed;
+                width: 36px;
+                height: 36px;
+                pointer-events: none;
+                z-index: 30;
+            }
+            #cursorstack canvas {
+                width: 36px;
+                height: 36px;
+                image-rendering: pixelated;
+            }
+            #cursorstack .count {
+                position: absolute;
+                right: 0;
+                bottom: 0;
+                color: #fff;
+                font-size: 12px;
+                font-weight: bold;
+                text-shadow: 1px 1px 0 #000;
+            }
+
+            #overlay,
+            #death {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 16px;
+                color: #fff;
+                cursor: pointer;
+                font-family: 'Segoe UI', monospace;
+                z-index: 10;
+            }
+            #overlay {
+                background: rgba(10, 20, 40, 0.75);
+            }
+            #overlay h1 {
+                font-size: 42px;
+                margin: 0;
+                letter-spacing: 4px;
+                text-shadow: 3px 3px 0 #2a5;
+            }
+            #overlay .ctrl {
+                font-size: 14px;
+                line-height: 1.8;
+                color: #cde;
+                text-align: center;
+            }
+            #overlay .click {
+                font-size: 18px;
+                margin-top: 12px;
+                animation: pulse 1.2s infinite;
+            }
+            @keyframes pulse {
+                50% {
+                    opacity: 0.4;
+                }
+            }
+
+            #death {
+                background: rgba(120, 10, 10, 0.55);
+                cursor: default;
+            }
+            #death h1 {
+                font-size: 48px;
+                margin: 0;
+                text-shadow: 3px 3px 0 #400;
+            }
+            #respawnbtn {
+                pointer-events: auto;
+                font-size: 18px;
+                padding: 10px 28px;
+                cursor: pointer;
+                background: #3a3a3a;
+                color: #fff;
+                border: 2px solid #888;
+                border-radius: 4px;
+                font-family: inherit;
+            }
+            #respawnbtn:hover {
+                background: #555;
+            }
+
+            #newworld {
+                pointer-events: auto;
+                margin-top: 18px;
+                font-size: 13px;
+                padding: 7px 16px;
+                cursor: pointer;
+                background: rgba(60, 60, 70, 0.8);
+                color: #ccc;
+                border: 1px solid #777;
+                border-radius: 4px;
+                font-family: inherit;
+            }
+            #newworld:hover {
+                background: rgba(90, 90, 100, 0.9);
+                color: #fff;
+            }
+        </style>
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div id="overlay">
+            <h1>MINECRAFT-ISH</h1>
+            <div class="ctrl">
+                WASD bouger | Souris regarder | Espace sauter | Shift sprinter<br />
+                Clic gauche: miner / attaquer (maintenir pour casser) | Clic droit: placer /
+                manger<br />
+                E: inventaire + craft | 1-9 / molette: hotbar | Clic molette: choisir bloc<br />
+                Mine du bois → planches → établi → pioche → pierre → fer → diamant.<br />
+                Survis à la nuit. Les zombies arrivent. 🌙
+            </div>
+            <div class="click">▶ Clique pour jouer</div>
+            <button id="newworld">🌍 Nouveau monde (efface la sauvegarde)</button>
+        </div>
+
+        <div id="death" class="hidden">
+            <h1>Tu es mort!</h1>
+            <button id="respawnbtn">Réapparaître</button>
+        </div>
+
+        <div id="hud">
+            <div id="crosshair"></div>
+            <div id="debug"></div>
+            <div id="blockname"></div>
+            <canvas id="stats" width="182" height="30"></canvas>
+            <div id="hotbar"></div>
+        </div>
+
+        <div id="vignette"></div>
+
+        <div id="inventory" class="hidden">
+            <div>
+                <h3>Armure</h3>
+                <div id="invarmor"></div>
+            </div>
+            <div>
+                <h3>Inventaire</h3>
+                <div id="invmain"></div>
+                <div id="invhotbar"></div>
+            </div>
+            <div>
+                <h3>Recettes</h3>
+                <div id="recipes"></div>
+            </div>
+        </div>
+
+        <div id="cursorstack" class="hidden">
+            <canvas width="16" height="16"></canvas><span class="count"></span>
+        </div>
+
+        <script type="module" src="src/main.js"></script>
+    </body>
+</html>
