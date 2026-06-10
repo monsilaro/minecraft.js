@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { AIR, WATER, BLOCKS, blockDrops } from '../world/blocks.js';
 import { defOf } from '../items/inventory.js';
+import { IT } from '../items/items.js';
 import { S } from '../audio/sounds.js';
 
 const REACH = 5;
@@ -64,6 +65,8 @@ export class Interaction {
         this.mineProgress = 0;
         this.attackCd = 0;
         this.digSoundTimer = 0;
+        this.bowCharge = -1; // -1 idle, 0..1 while drawing
+        this.onUseBed = null; // cb(x, y, z) wired by main
         this.dir = new THREE.Vector3();
 
         // target highlight
@@ -99,11 +102,17 @@ export class Interaction {
             } else if (e.button === 1) {
                 this.pickBlock();
             } else if (e.button === 2) {
-                this.rightClick();
+                const held = this.inv.currentItem();
+                if (held && defOf(held.id)?.bow && !this.player.dead) {
+                    if (this.inv.count(IT.ARROW) > 0) this.bowCharge = 0;
+                } else {
+                    this.rightClick();
+                }
             }
         });
         dom.addEventListener('mouseup', (e) => {
             if (e.button === 0) this.leftDown = false;
+            if (e.button === 2 && this.bowCharge >= 0) this.releaseBow();
         });
         dom.addEventListener('contextmenu', (e) => e.preventDefault());
     }
@@ -162,6 +171,11 @@ export class Interaction {
             return;
         }
 
+        if (hit.id === 24 && this.onUseBed) {
+            this.onUseBed(hit.x, hit.y, hit.z);
+            return;
+        }
+
         if (!held || held.id >= 100) return; // only blocks are placeable
         const px = hit.x + hit.normal[0];
         const py = hit.y + hit.normal[1];
@@ -205,10 +219,38 @@ export class Interaction {
         return { nearTable, nearFurnace };
     }
 
+    // ---- bow ----
+
+    releaseBow() {
+        const charge = this.bowCharge;
+        this.bowCharge = -1;
+        if (charge < 0.12 || this.player.dead) return;
+        if (this.inv.count(IT.ARROW) <= 0) return;
+
+        this.camera.getWorldDirection(this.dir);
+        const origin = this.camera.position.clone().addScaledVector(this.dir, 0.4);
+        const vel = this.dir.clone().multiplyScalar(12 + charge * 16);
+        this.mobs.shootArrow(origin, vel, {
+            fromPlayer: true,
+            dmg: 2 + Math.round(charge * 6),
+            shooterPos: this.player.pos.clone(),
+        });
+        this.inv.take(IT.ARROW, 1);
+        this.inv.wearSelected();
+        S.bow();
+    }
+
     // ---- per-frame: mining + highlight ----
 
     update(dt, active) {
         this.attackCd = Math.max(0, this.attackCd - dt);
+
+        if (this.bowCharge >= 0) {
+            const held = this.inv.currentItem();
+            if (!active || !held || !defOf(held.id)?.bow) this.bowCharge = -1;
+            else this.bowCharge = Math.min(1, this.bowCharge + dt / 1.0);
+        }
+
         const hit = active ? this.target() : null;
 
         if (hit) {

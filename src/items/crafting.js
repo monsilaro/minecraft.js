@@ -15,6 +15,31 @@ export const RECIPES = [
     }, // torches
     { out: { id: 21, n: 1 }, ins: [{ id: 8, n: 4 }] }, // crafting table
     { out: { id: 22, n: 1 }, ins: [{ id: 9, n: 8 }], table: true }, // furnace
+    {
+        out: { id: 24, n: 1 },
+        ins: [
+            { id: 8, n: 3 },
+            { id: IT.FIBER, n: 3 },
+        ],
+        table: true,
+    }, // bed
+    {
+        out: { id: IT.BOW, n: 1 },
+        ins: [
+            { id: IT.STICK, n: 3 },
+            { id: IT.FIBER, n: 3 },
+        ],
+        table: true,
+    },
+    {
+        out: { id: IT.ARROW, n: 4 },
+        ins: [
+            { id: IT.STICK, n: 1 },
+            { id: IT.FIBER, n: 1 },
+            { id: IT.COAL, n: 1 },
+        ],
+        table: true,
+    },
 
     {
         out: { id: IT.WOOD_PICK, n: 1 },

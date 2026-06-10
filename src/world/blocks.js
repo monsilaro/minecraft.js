@@ -177,7 +177,7 @@ export const BLOCKS = {
         hardness: 0,
         render: 'cross',
         tiles: { top: 22, bottom: 22, side: 22 },
-        drop: () => [],
+        drop: (r) => (r() < 0.6 ? [{ id: IT.FIBER, n: 1 }] : []),
     },
     21: {
         name: 'Établi',
@@ -202,9 +202,17 @@ export const BLOCKS = {
         hardness: 0.3,
         tiles: { top: 29, bottom: 29, side: 28 },
     },
+    24: {
+        name: 'Lit',
+        solid: true,
+        transparent: false,
+        hardness: 0.8,
+        tiles: { top: 30, bottom: 8, side: 31 },
+    },
 };
 
 export const TNT = 23;
+export const BED = 24;
 
 // Fast lookup tables (hot paths: lighting BFS, meshing, physics)
 export const OPAQUE_LUT = new Uint8Array(64);

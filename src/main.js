@@ -137,6 +137,23 @@ interact.onIgniteTNT = (x, y, z) => {
     S.hiss();
 };
 
+// bed: set spawn, and skip to morning at night (unless hostiles are nearby)
+interact.onUseBed = (x, y, z) => {
+    const danger = mobs.mobs.some((m) => m.type !== 'pig' && m.pos.distanceTo(player.pos) < 12);
+    if (danger) {
+        ui.toast('Trop dangereux pour dormir!');
+        return;
+    }
+    player.spawnPoint.set(x + 0.5, y + 1.2, z + 0.5);
+    if (env.isNight) {
+        sky.timeOfDay = 0.0; // sunrise
+        ui.toast('Tu te réveilles au matin. Réapparition définie.');
+    } else {
+        ui.toast('Point de réapparition défini.');
+    }
+    persist();
+};
+
 // ---- held item view ----
 const heldGroup = new THREE.Group();
 camera.add(heldGroup);
@@ -249,14 +266,18 @@ function loop() {
     drops.update(dt, player, inv, () => S.pickup(), camera, Math.max(dayFactor, 0.3));
     effects.update(dt);
 
-    // held item swing + bob
+    // held item swing + bob + bow draw
     refreshHeld();
     swingT = Math.min(1, swingT + dt * 4);
     const swing = Math.sin(swingT * Math.PI) * 0.5;
+    const draw = Math.max(0, interact.bowCharge); // pull the bow toward the eye
     heldGroup.rotation.x = -swing * 1.2;
+    heldGroup.position.x = 0.42 - draw * 0.18;
+    heldGroup.position.z = -0.65 + draw * 0.22;
     heldGroup.position.y =
         -0.38 -
         swing * 0.18 +
+        draw * 0.1 +
         Math.sin(performance.now() * 0.008) * 0.012 * Math.hypot(player.vel.x, player.vel.z) * 0.2;
 
     // fog + background

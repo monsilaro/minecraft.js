@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { fbm2, valueNoise3, hash2, mulberry32 } from '../core/noise.js';
 import { AIR, WATER, BEDROCK, BLOCKS, blockDrops, isSolid } from './blocks.js';
-import { buildChunkGeometry } from './mesher.js';
+import { buildChunkGeometry, arraysToGeometry } from './mesher.js';
 import { computeLightRegion } from './lighting.js';
 import { CHUNK, HEIGHT, SEA } from './constants.js';
 
@@ -101,6 +101,24 @@ export class World {
             opacity: 1,
             transparent: true,
         });
+
+        // mesh worker: lighting BFS + geometry building off the main thread
+        this.pendingJobs = new Map(); // chunk key -> jobId
+        this.jobCounter = 0;
+        this.worker = null;
+        try {
+            this.worker = new Worker(new URL('./mesh-worker.js', import.meta.url), {
+                type: 'module',
+            });
+            this.worker.onmessage = (e) => this.onMeshResult(e.data);
+            this.worker.onerror = (e) => {
+                console.warn('mesh worker failed, falling back to sync meshing', e.message);
+                this.worker = null;
+                this.pendingJobs.clear();
+            };
+        } catch (e) {
+            console.warn('mesh worker unavailable, meshing on main thread', e);
+        }
     }
 
     makeMaterial(map, { alphaTest, opacity, transparent }) {
@@ -380,15 +398,18 @@ export class World {
             }
         }
 
-        let meshLeft = MESH_BUDGET;
+        let meshLeft = this.worker ? MESH_BUDGET * 3 : MESH_BUDGET;
         outer2: for (let r = 0; r <= MESH_RADIUS && meshLeft > 0; r++) {
             for (let dx = -r; dx <= r; dx++) {
                 for (let dz = -r; dz <= r; dz++) {
                     if (Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
-                    const c = this.chunks.get(key(pcx + dx, pcz + dz));
+                    const k = key(pcx + dx, pcz + dz);
+                    const c = this.chunks.get(k);
                     if (!c || (!c.dirty && c.meshes)) continue;
+                    if (this.pendingJobs.has(k)) continue;
                     if (!this.neighborsReady(pcx + dx, pcz + dz)) continue;
-                    this.meshChunk(c);
+                    if (this.worker) this.requestMesh(c);
+                    else this.meshChunk(c);
                     if (--meshLeft <= 0) break outer2;
                 }
             }
@@ -412,6 +433,59 @@ export class World {
         }
         return true;
     }
+
+    // ---- async meshing via the worker ----
+
+    requestMesh(chunk) {
+        const k = key(chunk.cx, chunk.cz);
+        const jobId = ++this.jobCounter;
+        this.pendingJobs.set(k, jobId);
+        chunk.dirty = false; // a later edit re-dirties and re-queues after the reply
+
+        // copy the 3x3 neighborhood (light margin 14 < chunk size 16)
+        const chunksData = [];
+        for (let dx = -1; dx <= 1; dx++) {
+            for (let dz = -1; dz <= 1; dz++) {
+                const c = this.chunks.get(key(chunk.cx + dx, chunk.cz + dz));
+                if (c) {
+                    chunksData.push({
+                        cx: c.cx,
+                        cz: c.cz,
+                        blocks: new Uint8Array(c.blocks),
+                    });
+                }
+            }
+        }
+        const transfers = chunksData.map((c) => c.blocks.buffer);
+        this.worker.postMessage(
+            { jobId, cx: chunk.cx, cz: chunk.cz, chunks: chunksData },
+            transfers,
+        );
+    }
+
+    onMeshResult({ jobId, cx, cz, opaque, trans }) {
+        const k = key(cx, cz);
+        if (this.pendingJobs.get(k) !== jobId) return; // superseded or cancelled
+        this.pendingJobs.delete(k);
+        const chunk = this.chunks.get(k);
+        if (!chunk) return;
+
+        this.disposeMeshes(chunk);
+        const meshes = {};
+        const og = arraysToGeometry(opaque);
+        if (og) {
+            meshes.opaque = new THREE.Mesh(og, this.opaqueMaterial);
+            this.scene.add(meshes.opaque);
+        }
+        const tg = arraysToGeometry(trans);
+        if (tg) {
+            meshes.trans = new THREE.Mesh(tg, this.transMaterial);
+            this.scene.add(meshes.trans);
+        }
+        chunk.meshes = meshes;
+    }
+
+    // ---- synchronous meshing (spawn pregeneration, worker fallback) ----
 
     meshChunk(chunk) {
         this.disposeMeshes(chunk);

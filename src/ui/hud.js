@@ -140,7 +140,12 @@ export class UI {
         this.inv.selected = i;
         this.hotbarSlots.forEach((s, j) => s.classList.toggle('selected', j === i));
         const stack = this.inv.slots[i];
-        this.nameEl.textContent = stack ? nameOf(stack.id) : '';
+        this.toast(stack ? nameOf(stack.id) : '');
+    }
+
+    // brief fading message above the hotbar (item names, bed feedback, ...)
+    toast(text) {
+        this.nameEl.textContent = text;
         this.nameEl.classList.remove('show');
         void this.nameEl.offsetWidth;
         this.nameEl.classList.add('show');

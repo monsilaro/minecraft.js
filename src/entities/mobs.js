@@ -380,8 +380,10 @@ class Mob {
             if (this.type === 'pig') drops = [{ id: IT.PORKCHOP, n: roll(2) }];
             else if (this.type === 'zombie')
                 drops = Math.random() < 0.8 ? [{ id: IT.FLESH, n: roll(2) }] : [];
-            else if (this.type === 'skeleton') drops = [{ id: IT.BONE, n: roll(2) }];
-            else if (!this.exploded) drops = [{ id: IT.GUNPOWDER, n: roll(2) }];
+            else if (this.type === 'skeleton') {
+                drops = [{ id: IT.BONE, n: roll(2) }];
+                if (Math.random() < 0.7) drops.push({ id: IT.ARROW, n: roll(2) });
+            } else if (!this.exploded) drops = [{ id: IT.GUNPOWDER, n: roll(2) }];
             env.dropManager.scatter(this.pos, drops);
         }
     }
@@ -420,10 +422,11 @@ export class MobManager {
         this.spawnTimer = 0;
     }
 
-    shootArrow(pos, vel) {
+    // opts: { fromPlayer, dmg, shooterPos } — player arrows hit mobs instead
+    shootArrow(pos, vel, opts = {}) {
         const mesh = new THREE.Mesh(arrowGeo, arrowMat);
         this.scene.add(mesh);
-        this.arrows.push({ pos: pos.clone(), vel: vel.clone(), mesh, age: 0 });
+        this.arrows.push({ pos: pos.clone(), vel: vel.clone(), mesh, age: 0, ...opts });
     }
 
     update(dt, env) {
@@ -456,7 +459,26 @@ export class MobManager {
             a.mesh.position.copy(a.pos);
             a.mesh.lookAt(a.pos.x + a.vel.x, a.pos.y + a.vel.y, a.pos.z + a.vel.z);
 
+            if (a.fromPlayer) {
+                // player arrows hit mobs (AABB expanded a touch for fairness)
+                const hitMob = this.mobs.find(
+                    (m) =>
+                        !m.dead &&
+                        Math.abs(a.pos.x - m.pos.x) < m.half + 0.25 &&
+                        Math.abs(a.pos.z - m.pos.z) < m.half + 0.25 &&
+                        a.pos.y > m.pos.y - 0.15 &&
+                        a.pos.y < m.pos.y + m.height + 0.15,
+                );
+                if (hitMob) {
+                    hitMob.hurt(a.dmg || 4, a.shooterPos || a.pos, env);
+                    env.sounds.mobHit();
+                    this.removeArrow(i);
+                    continue;
+                }
+            }
+
             const hitPlayer =
+                !a.fromPlayer &&
                 !p.dead &&
                 Math.abs(a.pos.x - p.pos.x) < 0.5 &&
                 Math.abs(a.pos.z - p.pos.z) < 0.5 &&

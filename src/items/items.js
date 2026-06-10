@@ -22,6 +22,9 @@ export const IT = {
     APPLE: 133,
     BONE: 134,
     GUNPOWDER: 135,
+    FIBER: 136,
+    ARROW: 137,
+    BOW: 124,
     IRON_HELMET: 140,
     IRON_CHEST: 141,
     IRON_LEGS: 142,
@@ -71,6 +74,9 @@ export const ITEMS = {
     [IT.APPLE]: { name: 'Pomme', food: 4 },
     [IT.BONE]: { name: 'Os' },
     [IT.GUNPOWDER]: { name: 'Poudre à canon' },
+    [IT.FIBER]: { name: 'Fibre végétale' },
+    [IT.ARROW]: { name: 'Flèche' },
+    [IT.BOW]: { name: 'Arc', bow: true, dur: 384 },
 
     // armor: points feed the damage reduction (4% per point), slot 0=head..3=feet
     [IT.IRON_HELMET]: { name: 'Casque en fer', armor: 2, slot: 0, dur: 165 },
@@ -85,7 +91,7 @@ export const ITEMS = {
 
 export function isTool(id) {
     const d = ITEMS[id];
-    return !!(d && (d.tool || d.armor));
+    return !!(d && (d.tool || d.armor || d.bow));
 }
 
 export function isArmor(id) {

@@ -7,9 +7,9 @@ import * as THREE from 'three';
 import { mulberry32 } from '../core/noise.js';
 import { IT } from '../items/items.js';
 import { BLOCKS } from '../world/blocks.js';
+import { TILE, ATLAS_COLS, tileUV } from '../world/atlas.js';
 
-export const TILE = 16;
-export const ATLAS_COLS = 8;
+export { TILE, ATLAS_COLS, tileUV };
 
 function hexToRgb(hex) {
     const n = parseInt(hex.slice(1), 16);
@@ -326,6 +326,29 @@ const TILE_PAINTERS = [
             setHex(px, fx, fy, '#2a2a2a');
         }
     },
+    // 30 bed top: white pillow + red blanket
+    (px, rng) => {
+        noisyFill(px, rng, ['#b8332a', '#a82c24', '#c43d33']);
+        for (let y = 0; y < 5; y++) {
+            for (let x = 1; x < 15; x++) setHex(px, x, y, rng() < 0.2 ? '#e4e4e4' : '#f4f4f4');
+        }
+        for (let x = 0; x < TILE; x++) setHex(px, x, 5, '#7e1f18'); // blanket seam
+        for (let i = 0; i < TILE; i++) {
+            setHex(px, 0, i, '#6b4d2e');
+            setHex(px, 15, i, '#6b4d2e'); // wood frame rails
+        }
+    },
+    // 31 bed side: blanket over wood frame
+    (px, rng) => {
+        noisyFill(px, rng, ['#b8332a', '#a82c24', '#c43d33']);
+        for (let y = 10; y < TILE; y++) {
+            for (let x = 0; x < TILE; x++)
+                setHex(px, x, y, PLANK[Math.floor(rng() * PLANK.length)]);
+        }
+        for (let x = 0; x < TILE; x++) setHex(px, x, 10, '#5e4426');
+        for (let x = 1; x < 5; x++) setHex(px, x, 2, '#f4f4f4'); // pillow peek
+        for (let x = 1; x < 5; x++) setHex(px, x, 3, '#e4e4e4');
+    },
 ];
 
 export function createAtlas() {
@@ -348,19 +371,6 @@ export function createAtlas() {
     texture.generateMipmaps = false;
 
     return { texture, canvas };
-}
-
-export function tileUV(index) {
-    const col = index % ATLAS_COLS;
-    const row = Math.floor(index / ATLAS_COLS);
-    const s = 1 / ATLAS_COLS;
-    const inset = s * 0.02;
-    return {
-        u0: col * s + inset,
-        v0: (ATLAS_COLS - 1 - row) * s + inset,
-        u1: (col + 1) * s - inset,
-        v1: (ATLAS_COLS - row) * s - inset,
-    };
 }
 
 // ---- mining crack overlay, 4 stages ----
@@ -509,6 +519,51 @@ const ITEM_PAINTERS = {
         blob(px, 8, 9, 4, ['#5a5a5a', '#444444', '#6e6e6e'], rng);
         setHex(px, 6, 7, '#8a8a8a');
         setHex(px, 10, 10, '#8a8a8a');
+    },
+    [IT.FIBER]: (px, rng) => {
+        const greens = ['#7da34a', '#6b9140', '#8fb45a'];
+        for (let i = 0; i < 5; i++) {
+            let x = 4 + i * 2;
+            for (let y = 13; y > 4 + Math.floor(rng() * 3); y--) {
+                setHex(px, x, y, greens[Math.floor(rng() * greens.length)]);
+                if (rng() < 0.3) x += rng() < 0.5 ? 1 : -1;
+            }
+        }
+    },
+    [IT.ARROW]: (px) => {
+        for (let i = 0; i < 8; i++) setHex(px, 4 + i, 11 - i, '#8a6d3b'); // shaft
+        setHex(px, 12, 3, '#c8c8c8');
+        setHex(px, 13, 2, '#e0e0e0'); // tip
+        setHex(px, 12, 2, '#c8c8c8');
+        setHex(px, 3, 12, '#f0ead6');
+        setHex(px, 2, 13, '#f0ead6'); // fletching
+        setHex(px, 4, 13, '#ded5b8');
+        setHex(px, 3, 14, '#ded5b8');
+    },
+    [IT.BOW]: (px) => {
+        // curved stave
+        for (const [x, y] of [
+            [4, 2],
+            [5, 2],
+            [6, 3],
+            [7, 4],
+            [8, 5],
+            [9, 6],
+            [10, 7],
+            [11, 8],
+            [12, 9],
+            [13, 10],
+            [13, 11],
+            [12, 12],
+        ]) {
+            setHex(px, x, y, '#6b4d2e');
+            setHex(px, x + 1, y + 1, '#523a20');
+        }
+        // string
+        for (let i = 0; i < 10; i++) setHex(px, 3, 3 + i, '#e8e2d0');
+        setHex(px, 4, 3, '#e8e2d0');
+        setHex(px, 4, 13, '#e8e2d0');
+        setHex(px, 12, 13, '#e8e2d0');
     },
 };
 
