@@ -185,7 +185,8 @@
                 top: 50%;
                 transform: translate(-50%, -50%);
                 display: flex;
-                gap: 14px;
+                flex-direction: column;
+                gap: 12px;
                 padding: 14px;
                 background: rgba(25, 25, 30, 0.92);
                 border: 3px solid #555;
@@ -193,6 +194,25 @@
                 pointer-events: auto;
                 font-family: 'Segoe UI', monospace;
                 z-index: 20;
+            }
+            .invrow {
+                display: flex;
+                gap: 14px;
+            }
+            #invfooter {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding-top: 10px;
+                border-top: 1px solid #444;
+            }
+            #invfooter .ctrl {
+                flex: 1;
+                font-size: 11px;
+                line-height: 1.4;
+                color: #9ab;
+                text-align: center;
             }
             #inventory h3 {
                 margin: 0 0 8px;
@@ -238,11 +258,82 @@
             }
             #recipes {
                 width: 280px;
-                max-height: 320px;
+                max-height: 200px;
                 overflow-y: auto;
                 display: flex;
                 flex-direction: column;
                 gap: 4px;
+            }
+
+            /* crafting grid + output */
+            #craftcol {
+                width: 280px;
+            }
+            #craftarea {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+            #craftgrid {
+                display: grid;
+                gap: 3px;
+            }
+            #craftgrid .slot {
+                width: 44px;
+                height: 44px;
+                cursor: pointer;
+            }
+            .craftarrow {
+                font-size: 22px;
+                color: #9ab;
+            }
+            #craftout {
+                width: 54px;
+                height: 54px;
+                cursor: pointer;
+                background: rgba(120, 180, 120, 0.12);
+                border-color: #6a6;
+            }
+
+            /* furnace */
+            #furnacearea {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin: 8px 0;
+            }
+            #furnacearea .fcol {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            #furnacearea .slot {
+                width: 48px;
+                height: 48px;
+                cursor: pointer;
+            }
+            #furnaceout {
+                background: rgba(120, 180, 120, 0.12);
+                border-color: #6a6;
+            }
+            .fprogress {
+                width: 60px;
+                height: 8px;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid #555;
+                border-radius: 3px;
+                overflow: hidden;
+            }
+            #fbar {
+                height: 100%;
+                width: 0%;
+                background: #e0902a;
+            }
+            .fhint {
+                font-size: 12px;
+                color: #9ab;
+                line-height: 1.4;
             }
             .recipe {
                 display: flex;
@@ -302,7 +393,6 @@
                 text-shadow: 1px 1px 0 #000;
             }
 
-            #overlay,
             #death {
                 position: fixed;
                 inset: 0;
@@ -312,39 +402,25 @@
                 justify-content: center;
                 gap: 16px;
                 color: #fff;
-                cursor: pointer;
                 font-family: 'Segoe UI', monospace;
                 z-index: 10;
-            }
-            #overlay {
-                background: rgba(10, 20, 40, 0.75);
-            }
-            #overlay h1 {
-                font-size: 42px;
-                margin: 0;
-                letter-spacing: 4px;
-                text-shadow: 3px 3px 0 #2a5;
-            }
-            #overlay .ctrl {
-                font-size: 14px;
-                line-height: 1.8;
-                color: #cde;
-                text-align: center;
-            }
-            #overlay .click {
-                font-size: 18px;
-                margin-top: 12px;
-                animation: pulse 1.2s infinite;
-            }
-            @keyframes pulse {
-                50% {
-                    opacity: 0.4;
-                }
+                background: rgba(120, 10, 10, 0.55);
             }
 
-            #death {
-                background: rgba(120, 10, 10, 0.55);
-                cursor: default;
+            /* pause veil: shown whenever the pointer is unlocked mid-game */
+            #pause {
+                position: fixed;
+                inset: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(10, 20, 40, 0.5);
+                color: #fff;
+                font-family: 'Segoe UI', monospace;
+                font-size: 22px;
+                letter-spacing: 1px;
+                cursor: pointer;
+                z-index: 12;
             }
             #death h1 {
                 font-size: 48px;
@@ -366,19 +442,21 @@
                 background: #555;
             }
 
-            #newworld {
+            #newworld,
+            #setday {
                 pointer-events: auto;
-                margin-top: 18px;
                 font-size: 13px;
                 padding: 7px 16px;
                 cursor: pointer;
+                white-space: nowrap;
                 background: rgba(60, 60, 70, 0.8);
                 color: #ccc;
                 border: 1px solid #777;
                 border-radius: 4px;
                 font-family: inherit;
             }
-            #newworld:hover {
+            #newworld:hover,
+            #setday:hover {
                 background: rgba(90, 90, 100, 0.9);
                 color: #fff;
             }
@@ -502,20 +580,7 @@
             <div id="slotcards"></div>
         </div>
 
-        <div id="overlay" class="hidden">
-            <h1>MINECRAFT-ISH</h1>
-            <div class="ctrl">
-                WASD bouger | Souris regarder | Espace sauter | Shift sprinter<br />
-                Clic gauche: miner / attaquer (maintenir pour casser) | Clic droit: placer /
-                manger<br />
-                E: inventaire + craft | 1-9 / molette: hotbar | Clic molette: choisir bloc<br />
-                Mine du bois → planches → établi → pioche → pierre → fer → diamant.<br />
-                Survis à la nuit. Les zombies arrivent. 🌙
-            </div>
-            <label id="volume">🔊 Volume <input id="volslider" type="range" min="0" max="100" /><span id="volval"></span></label>
-            <div class="click">▶ Clique pour jouer</div>
-            <button id="newworld">🌍 Changer de monde</button>
-        </div>
+        <div id="pause" class="hidden">⏸ Pausé — clique pour reprendre</div>
 
         <div id="death" class="hidden">
             <h1>Tu es mort!</h1>
@@ -533,18 +598,49 @@
         <div id="vignette"></div>
 
         <div id="inventory" class="hidden">
-            <div>
-                <h3>Armure</h3>
-                <div id="invarmor"></div>
+            <div class="invrow">
+                <div>
+                    <h3>Armure</h3>
+                    <div id="invarmor"></div>
+                </div>
+                <div>
+                    <h3>Inventaire</h3>
+                    <div id="invmain"></div>
+                    <div id="invhotbar"></div>
+                </div>
+                <div id="craftcol">
+                    <div id="craftpanel">
+                        <h3 id="crafttitle">Fabrication</h3>
+                        <div id="craftarea">
+                            <div id="craftgrid"></div>
+                            <div class="craftarrow">▶</div>
+                            <div id="craftout" class="slot"></div>
+                        </div>
+                        <h3>Recettes</h3>
+                        <div id="recipes"></div>
+                    </div>
+                    <div id="furnacepanel" class="hidden">
+                        <h3>Fourneau</h3>
+                        <div id="furnacearea">
+                            <div class="fcol">
+                                <div id="furnacein" class="slot"></div>
+                                <div id="furnacefuel" class="slot"></div>
+                            </div>
+                            <div class="fprogress"><div id="fbar"></div></div>
+                            <div id="furnaceout" class="slot"></div>
+                        </div>
+                        <div class="fhint">Place un objet à fondre (haut) et du charbon (bas).</div>
+                    </div>
+                </div>
             </div>
-            <div>
-                <h3>Inventaire</h3>
-                <div id="invmain"></div>
-                <div id="invhotbar"></div>
-            </div>
-            <div>
-                <h3>Recettes</h3>
-                <div id="recipes"></div>
+            <div id="invfooter">
+                <label id="volume">🔊 <input id="volslider" type="range" min="0" max="100" /><span id="volval"></span></label>
+                <div class="ctrl">
+                    WASD bouger · Espace sauter · Clic G miner · Clic D placer/manger · E/Tab
+                    inventaire · 1-9 hotbar
+                </div>
+                <button id="setday">☀️ Jour</button>
+                <button id="newworld">🌍 Changer de monde</button>
             </div>
         </div>
 

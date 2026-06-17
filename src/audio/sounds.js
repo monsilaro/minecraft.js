@@ -169,4 +169,9 @@ export const S = {
     equip() {
         tone(440, 560, 0.07, 'sine', 0.07, 0, 0.005);
     },
+    // wooden door creak
+    door() {
+        burst(0.12, 0.08, 260);
+        tone(230, 150, 0.13, 'triangle', 0.06, 0, 0.012);
+    },
 };

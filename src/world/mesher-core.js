@@ -6,7 +6,7 @@
 // light (separate attributes so the shader can scale skylight with the time
 // of day), and cross-rendered blocks (plants, torches).
 
-import { AIR, BLOCKS, isOpaque } from './blocks.js';
+import { AIR, BLOCKS, isOpaque, doorFacing, doorOpen } from './blocks.js';
 import { tileUV } from './atlas.js';
 import { CHUNK, HEIGHT } from './constants.js';
 
@@ -176,6 +176,10 @@ export function buildChunkArrays(world, chunk, light) {
                     addCross(opaqueBuf, block, wx, y, wz, light);
                     continue;
                 }
+                if (block.render === 'door') {
+                    addDoor(transBuf, id, block, wx, y, wz, light);
+                    continue;
+                }
 
                 const buf = block.transparent ? transBuf : opaqueBuf;
                 for (const face of FACES) {
@@ -290,6 +294,44 @@ function addCross(buf, block, x, y, z, light) {
             buf.sky.push(sky);
             buf.torch.push(torch);
             buf.uvs.push(uvs[i][0], uvs[i][1]);
+        }
+        buf.quadIndices(false);
+    }
+}
+
+// Thin door panel: a slab hugging one cell edge. facing = blocked wall when
+// closed; open swings it 90° to a perpendicular edge.
+const DOOR_OPEN_WALL = [2, 3, 0, 1]; // +z↔+x, -z↔-x when opened
+function addDoor(buf, id, block, x, y, z, light) {
+    const T = 0.18;
+    const wall = doorOpen(id) ? DOOR_OPEN_WALL[doorFacing(id)] : doorFacing(id);
+    let x0 = 0,
+        x1 = 1,
+        z0 = 0,
+        z1 = 1;
+    if (wall === 0) z0 = 1 - T; // +z
+    else if (wall === 1) z1 = T; // -z
+    else if (wall === 2) x0 = 1 - T; // +x
+    else x1 = T; // -x
+
+    const { u0, v0, u1, v1 } = tileUV(block.tiles.side);
+    const sky = light.skyAt(x, y, z) / 15;
+    const torch = light.torchAt(x, y, z) / 15;
+    const min = [x + x0, y, z + z0];
+    const max = [x + x1, y + 1, z + z1];
+    for (const face of FACES) {
+        for (let i = 0; i < 4; i++) {
+            const c = face.corners[i];
+            buf.positions.push(
+                c[0] ? max[0] : min[0],
+                c[1] ? max[1] : min[1],
+                c[2] ? max[2] : min[2],
+            );
+            buf.colors.push(face.shade);
+            buf.sky.push(sky);
+            buf.torch.push(torch);
+            const uv = face.uvs[i];
+            buf.uvs.push(uv[0] ? u1 : u0, uv[1] ? v1 : v0);
         }
         buf.quadIndices(false);
     }

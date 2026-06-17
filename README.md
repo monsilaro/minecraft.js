@@ -20,19 +20,36 @@ npm run format     # prettier
   shader custom qui module le ciel selon l'heure — nuits noires, grottes sombres
 - Cycle jour/nuit 10 min: soleil, lune, étoiles, couchers de soleil
 - Survie: santé, faim, noyade, dégâts de chute, régénération, mort avec drop
-- Minage progressif (dureté × outil), paliers de pioches bois→pierre→fer→diamant
-- Craft: établi et fourneau débloquent les recettes avancées (fonte au charbon)
+- Minage progressif (dureté × outil), paliers d'outils bois→pierre→fer→diamant
+- **Craft en grille style Minecraft**: patterns *shaped*/shapeless dans une grille
+  2×2 (à la main) ou 3×3 (établi), slot de sortie calculé, clic droit = poser 1.
+  Livre de recettes qui auto-remplit la grille. **Fourneau** dédié (entrée +
+  charbon → fonte avec barre de progression)
+- Outils: pioches, épées et **haches** (la hache accélère le bois sans être requise)
+- **Portes en bois** 2 blocs de haut, 4 orientations, clic droit pour ouvrir/fermer
+- **Décroissance des feuilles**: coupe le tronc et le feuillage déconnecté tombe
+  graduellement (≤10 s), avec chance de pomme
 - Armure fer/diamant: 4 slots, réduction de dégâts, durabilité
 - Mobs: cochons (jour), zombies / squelettes archers / creepers (nuit) —
   les morts-vivants brûlent à l'aube
 - TNT avec réactions en chaîne
-- Sauvegarde localStorage: édits du monde (diff par chunk), inventaire, position
+- **3 emplacements de sauvegarde**, chacun avec son seed (map différente),
+  choisis sur un écran de sélection au démarrage; sauvegarde localStorage
+  (édits du monde par chunk, inventaire, position, heure)
+- **Un seul menu en jeu** (l'inventaire, ouvert par Tab/E) avec contrôle du
+  volume, bouton « Jour » et « Changer de monde »; voile de pause au
+  déverrouillage de la souris
+- Vue 1ʳᵉ personne: bras affiché à main vide, animation de coup avant/arrière
+  (en boucle pendant le minage)
 
 ## Contrôles
 
 WASD bouger · Souris regarder · Espace sauter · Shift sprinter ·
-Clic gauche miner/attaquer · Clic droit placer/manger/allumer ·
-Clic molette choisir le bloc · E inventaire + craft · 1-9 hotbar · F voler
+Clic gauche miner/attaquer · Clic droit placer/manger/ouvrir porte ·
+Clic molette choisir le bloc · **E / Tab inventaire + craft** · 1-9 hotbar · F voler
+
+Échap libère la souris (voile de pause, clic pour reprendre). Le menu de jeu
+s'ouvre/ferme uniquement avec E / Tab.
 
 ## Structure
 
@@ -40,13 +57,14 @@ Clic molette choisir le bloc · E inventaire + craft · 1-9 hotbar · F voler
 src/
 ├── main.js          assemblage + boucle de jeu
 ├── core/            noise (value noise/fbm), physics (AABB voxel), save (localStorage)
-├── world/           constants, blocks (registre), world (chunks/gen), lighting (BFS), mesher (AO + lumière)
+├── world/           constants, blocks (registre + portes), world (chunks/gen + décroissance feuilles),
+│                    lighting (BFS), mesher (AO + lumière), leafdecay (logique pure testable)
 ├── entities/        player (vitals), mobs (IA), drops (items au sol)
-├── items/           items (outils/nourriture/armure), inventory, crafting (recettes)
-├── gameplay/        interact (minage/combat/placement), effects (TNT/explosions)
+├── items/           items (outils/nourriture/armure), inventory, crafting (grille shaped + fonte)
+├── gameplay/        interact (minage/combat/placement/portes), effects (TNT/explosions)
 ├── render/          textures (atlas procédural + icônes), sky (cycle jour/nuit)
-├── ui/              hud (cœurs/hotbar/inventaire/recettes)
+├── ui/              hud (cœurs/hotbar/inventaire + grille craft + fourneau + recettes)
 └── audio/           sounds (synthé WebAudio)
-test/                tests node sans DOM (lighting, inventaire/craft)
+test/                tests node sans DOM (lighting, inventaire/craft, décroissance feuilles)
 tools/               scripts one-shot
 ```

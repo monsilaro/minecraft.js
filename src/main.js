@@ -90,8 +90,10 @@ function startGame(slot) {
         inv.add(8, 16); // small head start in a fresh world
     }
     document.getElementById('slotpicker').classList.add('hidden');
-    overlay.classList.remove('hidden');
     started = true;
+    // lock straight into the game using this click gesture (no "click to play")
+    S.unlock();
+    renderer.domElement.requestPointerLock();
 
     setInterval(persist, 10000);
     window.addEventListener('beforeunload', persist);
@@ -152,7 +154,14 @@ document.getElementById('newworld').addEventListener('click', (e) => {
     location.reload();
 });
 
-// ---- volume slider (on the play/pause overlay) ----
+// "Jour": skip the cycle to noon (brightest) — survive the night
+document.getElementById('setday').addEventListener('click', (e) => {
+    e.stopPropagation();
+    sky.timeOfDay = 0.25; // 0.25 = noon
+    ui.toast('☀️ Il fait jour!');
+});
+
+// ---- volume slider (in the inventory footer) ----
 const volSlider = document.getElementById('volslider');
 const volVal = document.getElementById('volval');
 function syncVol() {
@@ -164,7 +173,7 @@ volSlider.addEventListener('input', () => {
     setVolume(Number(volSlider.value) / 100);
     syncVol();
 });
-// don't let clicks on the slider trigger the overlay's pointer-lock
+// keep slider clicks from bubbling into game/menu handlers
 volSlider.addEventListener('click', (e) => e.stopPropagation());
 document.getElementById('volume').addEventListener('click', (e) => e.stopPropagation());
 
@@ -213,6 +222,9 @@ interact.onIgniteTNT = (x, y, z) => {
     S.hiss();
 };
 
+// breaking a log makes its disconnected leaves decay gradually
+interact.onLogBroken = (x, y, z) => world.decayLeavesAround(x, y, z);
+
 // bed: set spawn, and skip to morning at night (unless hostiles are nearby)
 interact.onUseBed = (x, y, z) => {
     const danger = mobs.mobs.some((m) => m.type !== 'pig' && m.pos.distanceTo(player.pos) < 12);
@@ -236,8 +248,31 @@ camera.add(heldGroup);
 scene.add(camera);
 heldGroup.position.set(0.42, -0.38, -0.65);
 let heldMesh = null;
-let heldId = null;
+let heldItemMat = null; // material of the held icon plane, or null (blocks/empty)
+let heldId = -2; // sentinel: forces the first refreshHeld() to run
 let swingT = 1;
+
+// base colors for the first-person arm; dimmed by daylight each frame
+const ARM_SKIN = new THREE.Color(0xcf9b6c);
+const ARM_SLEEVE = new THREE.Color(0x3a6ea5);
+
+// first-person right arm, shown when the hands are empty (so punches are visible)
+const armGroup = new THREE.Group();
+const armSkin = new THREE.Mesh(
+    new THREE.BoxGeometry(0.13, 0.13, 0.5),
+    new THREE.MeshBasicMaterial({ color: 0xcf9b6c }),
+);
+armSkin.position.set(0, 0, -0.18);
+const armSleeve = new THREE.Mesh(
+    new THREE.BoxGeometry(0.17, 0.17, 0.14),
+    new THREE.MeshBasicMaterial({ color: 0x3a6ea5 }),
+);
+armSleeve.position.set(0, 0, 0.12);
+armGroup.add(armSkin, armSleeve);
+armGroup.position.set(0.02, -0.05, 0.15);
+armGroup.rotation.set(0.5, 0.15, -0.2);
+armGroup.visible = false;
+heldGroup.add(armGroup);
 
 function refreshHeld() {
     const stack = inv.currentItem();
@@ -248,6 +283,8 @@ function refreshHeld() {
         heldGroup.remove(heldMesh);
         heldMesh = null;
     }
+    armGroup.visible = id === null; // empty hand → show the bare arm
+    heldItemMat = null;
     if (id === null) return;
     if (id < 100) {
         heldMesh = new THREE.Mesh(buildBlockItemGeometry(id, 0.4), world.opaqueMaterial);
@@ -264,12 +301,16 @@ function refreshHeld() {
             }),
         );
         heldMesh.rotation.y = -0.5;
+        heldItemMat = heldMesh.material; // unlit icon plane → dim it by daylight
     }
     heldGroup.add(heldMesh);
 }
 
 renderer.domElement.addEventListener('mousedown', () => {
     if (document.pointerLockElement === renderer.domElement) swingT = 0;
+    else if (started && !ui.inventoryOpen && !player.dead) {
+        renderer.domElement.requestPointerLock(); // safety: re-lock if somehow unlocked w/o veil
+    }
 });
 
 // ---- player damage / death feedback ----
@@ -288,34 +329,39 @@ player.onDeath = () => {
     });
 };
 
-// ---- pointer lock / pause overlay / inventory key ----
-const overlay = document.getElementById('overlay');
-overlay.addEventListener('click', () => {
+// ---- pointer lock is the single source of truth for the in-game menu ----
+// locked ⇒ menu closed (playing);  unlocked ⇒ menu open (paused).
+// Keys only request/exit the lock — they never open/close the menu directly,
+// which is what previously made Escape toggle the menu twice.
+// The menu is opened/closed ONLY by Tab/E. Escape just unlocks the pointer
+// (browser-forced, can't be intercepted) → show a pause veil; clicking it resumes.
+const pauseEl = document.getElementById('pause');
+pauseEl.addEventListener('click', () => {
     S.unlock();
     renderer.domElement.requestPointerLock();
 });
 document.addEventListener('pointerlockchange', () => {
     const locked = document.pointerLockElement === renderer.domElement;
-    if (locked) ui.setInventoryOpen(false);
-    overlay.classList.toggle('hidden', locked || ui.inventoryOpen || player.dead);
+    if (locked && ui.inventoryOpen) ui.setInventoryOpen(false); // re-locking = back in game
+    // veil only for the "unlocked, no menu" pause state (Escape / alt-tab)
+    pauseEl.classList.toggle('hidden', locked || ui.inventoryOpen || player.dead || !started);
 });
+// kill all browser context menus (UI + canvas) — right-click is game/UI only
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
 document.addEventListener('keydown', (e) => {
-    if (e.code === 'KeyE' && !player.dead) {
+    if (!started || player.dead || e.target?.tagName === 'INPUT') return;
+    if (e.code === 'Tab' || e.code === 'KeyE') {
+        e.preventDefault();
         if (ui.inventoryOpen) {
             ui.setInventoryOpen(false);
             renderer.domElement.requestPointerLock();
-        } else if (document.pointerLockElement === renderer.domElement) {
+        } else {
+            ui.setInventoryOpen(true, { mode: 'hand' });
             document.exitPointerLock();
-            ui.setInventoryOpen(true, interact.craftCtx());
         }
     }
-    if (e.code === 'Escape' && ui.inventoryOpen) ui.setInventoryOpen(false);
 });
-ui.onInventoryToggle = (open) => {
-    if (!open && document.pointerLockElement !== renderer.domElement && !player.dead) {
-        overlay.classList.remove('hidden');
-    }
-};
 
 // ---- main loop ----
 const debugEl = document.getElementById('debug');
@@ -345,20 +391,33 @@ function loop() {
     mobs.update(dt, env);
     drops.update(dt, player, inv, () => S.pickup(), camera, Math.max(dayFactor, 0.3));
     effects.update(dt);
+    ui.tickFurnace(dt); // smelting progresses while the furnace window is open
 
-    // held item swing + bob + bow draw
+    // leaves cut off from logs vanish gradually, sometimes dropping an apple
+    const leafDrops = world.updateLeafDecay(dt);
+    if (leafDrops) {
+        for (const d of leafDrops) drops.spawn(d.x + 0.5, d.y + 0.3, d.z + 0.5, d.id, d.n);
+    }
+
+    // held item: forward jab swing + walk bob + bow draw
     refreshHeld();
     swingT = Math.min(1, swingT + dt * 4);
-    const swing = Math.sin(swingT * Math.PI) * 0.5;
+    // keep jabbing on a loop while actively mining a block, until it breaks
+    if (interact.leftDown && interact.mineKey && swingT >= 1) swingT = 0;
+    const swing = Math.sin(swingT * Math.PI); // 0..1..0
     const draw = Math.max(0, interact.bowCharge); // pull the bow toward the eye
-    heldGroup.rotation.x = -swing * 1.2;
-    heldGroup.position.x = 0.42 - draw * 0.18;
-    heldGroup.position.z = -0.65 + draw * 0.22;
-    heldGroup.position.y =
-        -0.38 -
-        swing * 0.18 +
-        draw * 0.1 +
+    const bob =
         Math.sin(performance.now() * 0.008) * 0.012 * Math.hypot(player.vel.x, player.vel.z) * 0.2;
+    heldGroup.rotation.x = -swing * 0.35; // slight pitch; motion is mostly forward
+    heldGroup.position.x = 0.42 - draw * 0.18;
+    heldGroup.position.z = -0.65 + draw * 0.22 - swing * 0.35; // thrust forward (jab)
+    heldGroup.position.y = -0.38 + draw * 0.1 + bob - swing * 0.05;
+
+    // light the unlit first-person meshes by daylight (no night flash)
+    const heldLight = Math.max(0.18, dayFactor);
+    armSkin.material.color.copy(ARM_SKIN).multiplyScalar(heldLight);
+    armSleeve.material.color.copy(ARM_SLEEVE).multiplyScalar(heldLight);
+    if (heldItemMat) heldItemMat.color.setScalar(heldLight);
 
     // fog + background
     if (headInWater) {

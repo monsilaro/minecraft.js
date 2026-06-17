@@ -16,6 +16,10 @@ export const IT = {
     STONE_SWORD: 121,
     IRON_SWORD: 122,
     DIAMOND_SWORD: 123,
+    WOOD_AXE: 160,
+    STONE_AXE: 161,
+    IRON_AXE: 162,
+    DIAMOND_AXE: 163,
     PORKCHOP: 130,
     COOKED_PORKCHOP: 131,
     FLESH: 132,
@@ -67,6 +71,11 @@ export const ITEMS = {
     [IT.STONE_SWORD]: { name: 'Épée en pierre', tool: 'sword', speed: 1, dur: 132, dmg: 5 },
     [IT.IRON_SWORD]: { name: 'Épée en fer', tool: 'sword', speed: 1, dur: 251, dmg: 6 },
     [IT.DIAMOND_SWORD]: { name: 'Épée en diamant', tool: 'sword', speed: 1, dur: 1562, dmg: 7 },
+
+    [IT.WOOD_AXE]: { name: 'Hache en bois', tool: 'axe', tier: 1, speed: 2, dur: 60, dmg: 3 },
+    [IT.STONE_AXE]: { name: 'Hache en pierre', tool: 'axe', tier: 2, speed: 4, dur: 132, dmg: 4 },
+    [IT.IRON_AXE]: { name: 'Hache en fer', tool: 'axe', tier: 3, speed: 6, dur: 251, dmg: 5 },
+    [IT.DIAMOND_AXE]: { name: 'Hache en diamant', tool: 'axe', tier: 4, speed: 8, dur: 1562, dmg: 6 },
 
     [IT.PORKCHOP]: { name: 'Porc cru', food: 3 },
     [IT.COOKED_PORKCHOP]: { name: 'Porc cuit', food: 8 },

@@ -1,12 +1,12 @@
 {
     "name": "minecraft-ish",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "private": true,
     "type": "module",
     "description": "Voxel survival sandbox in Three.js — chunks, BFS lighting, mobs, crafting, localStorage saves",
     "scripts": {
         "dev": "npx -y serve -l 3002",
-        "test": "node test/light-test.mjs && node test/inv-test.mjs",
+        "test": "node test/light-test.mjs && node test/inv-test.mjs && node test/leafdecay-test.mjs",
         "check": "npx -y esbuild src/main.js --bundle --outfile=NUL --external:three --log-level=warning",
         "format": "npx -y prettier --write \"src/**/*.js\" \"test/*.mjs\" \"tools/*.mjs\" index.html"
     }

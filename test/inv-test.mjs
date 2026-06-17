@@ -1,10 +1,10 @@
 ﻿// Smoke test: inventory stacking + crafting chain log -> planks -> sticks -> pick.
 import { Inventory } from '../src/items/inventory.js';
-import { RECIPES, canCraft, doCraft } from '../src/items/crafting.js';
+import { RECIPES, matchCraft, recipeMinGrid, smeltOf, recipePlacement } from '../src/items/crafting.js';
 import { IT } from '../src/items/items.js';
+import { DOOR, isDoor, doorId, doorFacing, doorOpen, doorTop } from '../src/world/blocks.js';
 
 const inv = new Inventory();
-const ctx = { nearTable: true, nearFurnace: false };
 let fail = 0;
 
 function check(name, got, want) {
@@ -21,35 +21,52 @@ check('count', inv.count(2), 70);
 inv.take(2, 70);
 check('take all', inv.count(2), 0);
 
-// craft chain: 2 logs -> planks -> sticks -> wood pick
-inv.add(6, 2);
-const rPlanks = RECIPES.find((r) => r.out.id === 8);
-const rSticks = RECIPES.find((r) => r.out.id === IT.STICK);
-const rPick = RECIPES.find((r) => r.out.id === IT.WOOD_PICK);
+// shaped/shapeless grid matching
+check('planks shapeless (2x2)', matchCraft([6, 0, 0, 0], 2)?.out.id, 8);
+check('planks output count', matchCraft([0, 6, 0, 0], 2)?.out.n, 4);
 
-check('can craft planks', canCraft(inv, rPlanks, ctx), true);
-doCraft(inv, rPlanks, ctx);
-doCraft(inv, rPlanks, ctx);
-check('planks count', inv.count(8), 8);
-doCraft(inv, rSticks, ctx);
-check('sticks count', inv.count(IT.STICK), 4);
-check('can craft pick', canCraft(inv, rPick, ctx), true);
-doCraft(inv, rPick, ctx);
-check('pick crafted', inv.count(IT.WOOD_PICK), 1);
-check('pick has durability', inv.slots.find((s) => s?.id === IT.WOOD_PICK).dur, 60);
-check('planks consumed', inv.count(8), 3);
+const stick = matchCraft([8, 0, 8, 0], 2); // two planks stacked vertically
+check('sticks shaped (2x2)', stick?.out.id, IT.STICK);
+check('sticks use 2 cells', stick?.used.filter(Boolean).length, 2);
+check('horizontal planks ≠ sticks', matchCraft([8, 8, 0, 0], 2), null);
+check('empty grid no craft', matchCraft([0, 0, 0, 0], 2), null);
 
-// table gating
-const rFurnace = RECIPES.find((r) => r.out.id === 22);
+// pickaxe is a 3x3 recipe: cannot be made in the 2x2 hand grid
+check('pick needs 3x3', recipeMinGrid(RECIPES.find((r) => r.out.id === IT.WOOD_PICK)), 3);
+check('pick not in 2x2', matchCraft([8, 8, 0, 8], 2), null);
+const S = IT.STICK;
+const pick = matchCraft([8, 8, 8, 0, S, 0, 0, S, 0], 3);
+check('pick in 3x3', pick?.out.id, IT.WOOD_PICK);
+check('pick uses 5 cells', pick?.used.filter(Boolean).length, 5);
+
+// axe: 3x3 shaped recipe (XX / XS / _S), planks + sticks
+check('axe needs 3x3', recipeMinGrid(RECIPES.find((r) => r.out.id === IT.WOOD_AXE)), 3);
+const axe = matchCraft([8, 8, 0, 8, S, 0, 0, S, 0], 3);
+check('axe in 3x3', axe?.out.id, IT.WOOD_AXE);
+
+// door: state id round-trip + recipe (6 planks -> 3 doors, 3x3)
+const dId = doorId(2, true, true);
+check('door id facing', doorFacing(dId), 2);
+check('door id open', doorOpen(dId), true);
+check('door id top', doorTop(dId), true);
+check('isDoor true', isDoor(DOOR), true);
+check('isDoor false', isDoor(8), false);
+const door = matchCraft([8, 8, 0, 8, 8, 0, 8, 8, 0], 3);
+check('door recipe out', door?.out.id, DOOR);
+check('door recipe count', door?.out.n, 3);
+
+// recipe book placement
+check('placement planks at cell 0', recipePlacement(RECIPES.find((r) => r.out.id === 8), 2).get(0), 6);
+
+// smelting
+check('smelt raw iron -> ingot', smeltOf(IT.RAW_IRON)?.out.id, IT.IRON_INGOT);
+check('smelt non-smeltable', smeltOf(IT.STICK), null);
+
+// keep cobble around for the serialize round-trip below
 inv.add(9, 8);
-check(
-    'furnace needs table',
-    canCraft(inv, rFurnace, { nearTable: false, nearFurnace: false }),
-    false,
-);
-check('furnace with table', canCraft(inv, rFurnace, ctx), true);
 
 // tool wear
+inv.add(IT.WOOD_PICK, 1);
 inv.selected = inv.slots.findIndex((s) => s?.id === IT.WOOD_PICK);
 for (let i = 0; i < 59; i++) inv.wearSelected();
 check('tool not broken at 1', inv.currentItem()?.id, IT.WOOD_PICK);

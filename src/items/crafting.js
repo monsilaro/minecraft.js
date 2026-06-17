@@ -1,175 +1,220 @@
-// Recipe list (Minecraft-style recipe book). Some recipes need to be near a
-// placed crafting table; smelting needs to be near a placed furnace.
+// Minecraft-style grid crafting. Recipes are either SHAPED (a pattern of cells
+// that must be matched, position-relative within its bounding box) or SHAPELESS
+// (a multiset of items in any arrangement). Crafting happens in a 2x2 grid (hand,
+// in the inventory) or 3x3 grid (at a crafting table). Smelting is separate.
+//
+// Limitation: shaped matching is exact (no horizontal mirror). Place recipes as
+// shown.
 
 import { IT } from './items.js';
+import { DOOR } from '../world/blocks.js';
 
-export const RECIPES = [
-    { out: { id: 8, n: 4 }, ins: [{ id: 6, n: 1 }] }, // log -> planks
-    { out: { id: IT.STICK, n: 4 }, ins: [{ id: 8, n: 2 }] }, // planks -> sticks
-    {
-        out: { id: 17, n: 4 },
-        ins: [
-            { id: IT.COAL, n: 1 },
-            { id: IT.STICK, n: 1 },
-        ],
-    }, // torches
-    { out: { id: 21, n: 1 }, ins: [{ id: 8, n: 4 }] }, // crafting table
-    { out: { id: 22, n: 1 }, ins: [{ id: 9, n: 8 }], table: true }, // furnace
-    {
-        out: { id: 24, n: 1 },
-        ins: [
-            { id: 8, n: 3 },
-            { id: IT.FIBER, n: 3 },
-        ],
-        table: true,
-    }, // bed
-    {
-        out: { id: IT.BOW, n: 1 },
-        ins: [
-            { id: IT.STICK, n: 3 },
-            { id: IT.FIBER, n: 3 },
-        ],
-        table: true,
-    },
-    {
-        out: { id: IT.ARROW, n: 4 },
-        ins: [
-            { id: IT.STICK, n: 1 },
-            { id: IT.FIBER, n: 1 },
-            { id: IT.COAL, n: 1 },
-        ],
-        table: true,
-    },
+// material tiers for tools/armor, reused across recipes
+const PLANK = 8,
+    COBBLE = 9,
+    IRON = IT.IRON_INGOT,
+    DIAMOND = IT.DIAMOND;
 
-    {
-        out: { id: IT.WOOD_PICK, n: 1 },
-        ins: [
-            { id: 8, n: 3 },
-            { id: IT.STICK, n: 2 },
-        ],
-        table: true,
-    },
-    {
-        out: { id: IT.STONE_PICK, n: 1 },
-        ins: [
-            { id: 9, n: 3 },
-            { id: IT.STICK, n: 2 },
-        ],
-        table: true,
-    },
-    {
-        out: { id: IT.IRON_PICK, n: 1 },
-        ins: [
-            { id: IT.IRON_INGOT, n: 3 },
-            { id: IT.STICK, n: 2 },
-        ],
-        table: true,
-    },
-    {
-        out: { id: IT.DIAMOND_PICK, n: 1 },
-        ins: [
-            { id: IT.DIAMOND, n: 3 },
-            { id: IT.STICK, n: 2 },
-        ],
-        table: true,
-    },
-
-    {
-        out: { id: IT.WOOD_SWORD, n: 1 },
-        ins: [
-            { id: 8, n: 2 },
-            { id: IT.STICK, n: 1 },
-        ],
-        table: true,
-    },
-    {
-        out: { id: IT.STONE_SWORD, n: 1 },
-        ins: [
-            { id: 9, n: 2 },
-            { id: IT.STICK, n: 1 },
-        ],
-        table: true,
-    },
-    {
-        out: { id: IT.IRON_SWORD, n: 1 },
-        ins: [
-            { id: IT.IRON_INGOT, n: 2 },
-            { id: IT.STICK, n: 1 },
-        ],
-        table: true,
-    },
-    {
-        out: { id: IT.DIAMOND_SWORD, n: 1 },
-        ins: [
-            { id: IT.DIAMOND, n: 2 },
-            { id: IT.STICK, n: 1 },
-        ],
-        table: true,
-    },
-
-    {
-        out: { id: IT.IRON_INGOT, n: 1 },
-        ins: [
-            { id: IT.RAW_IRON, n: 1 },
-            { id: IT.COAL, n: 1 },
-        ],
-        furnace: true,
-    },
-    {
-        out: { id: IT.GOLD_INGOT, n: 1 },
-        ins: [
-            { id: IT.RAW_GOLD, n: 1 },
-            { id: IT.COAL, n: 1 },
-        ],
-        furnace: true,
-    },
-    {
-        out: { id: IT.COOKED_PORKCHOP, n: 1 },
-        ins: [
-            { id: IT.PORKCHOP, n: 1 },
-            { id: IT.COAL, n: 1 },
-        ],
-        furnace: true,
-    },
-
-    {
-        out: { id: 10, n: 1 },
-        ins: [
-            { id: 4, n: 1 },
-            { id: IT.COAL, n: 1 },
-        ],
-        furnace: true,
-    }, // glass
-
-    { out: { id: IT.IRON_HELMET, n: 1 }, ins: [{ id: IT.IRON_INGOT, n: 5 }], table: true },
-    { out: { id: IT.IRON_CHEST, n: 1 }, ins: [{ id: IT.IRON_INGOT, n: 8 }], table: true },
-    { out: { id: IT.IRON_LEGS, n: 1 }, ins: [{ id: IT.IRON_INGOT, n: 7 }], table: true },
-    { out: { id: IT.IRON_BOOTS, n: 1 }, ins: [{ id: IT.IRON_INGOT, n: 4 }], table: true },
-    { out: { id: IT.DIAMOND_HELMET, n: 1 }, ins: [{ id: IT.DIAMOND, n: 5 }], table: true },
-    { out: { id: IT.DIAMOND_CHEST, n: 1 }, ins: [{ id: IT.DIAMOND, n: 8 }], table: true },
-    { out: { id: IT.DIAMOND_LEGS, n: 1 }, ins: [{ id: IT.DIAMOND, n: 7 }], table: true },
-    { out: { id: IT.DIAMOND_BOOTS, n: 1 }, ins: [{ id: IT.DIAMOND, n: 4 }], table: true },
-
-    {
-        out: { id: 23, n: 1 },
-        ins: [
-            { id: IT.GUNPOWDER, n: 5 },
-            { id: 4, n: 4 },
-        ],
-        table: true,
-    }, // TNT
-];
-
-// ctx: { nearTable, nearFurnace }
-export function canCraft(inv, recipe, ctx) {
-    if (recipe.table && !ctx.nearTable) return false;
-    if (recipe.furnace && !ctx.nearFurnace) return false;
-    return recipe.ins.every((ing) => inv.count(ing.id) >= ing.n);
+function pick(mat, out) {
+    return { shape: ['XXX', ' S ', ' S '], key: { X: mat, S: IT.STICK }, out: { id: out, n: 1 } };
+}
+function sword(mat, out) {
+    return { shape: ['X', 'X', 'S'], key: { X: mat, S: IT.STICK }, out: { id: out, n: 1 } };
+}
+function axe(mat, out) {
+    return { shape: ['XX', 'XS', ' S'], key: { X: mat, S: IT.STICK }, out: { id: out, n: 1 } };
+}
+function helmet(mat, out) {
+    return { shape: ['XXX', 'X X'], key: { X: mat }, out: { id: out, n: 1 } };
+}
+function chest(mat, out) {
+    return { shape: ['X X', 'XXX', 'XXX'], key: { X: mat }, out: { id: out, n: 1 } };
+}
+function legs(mat, out) {
+    return { shape: ['XXX', 'X X', 'X X'], key: { X: mat }, out: { id: out, n: 1 } };
+}
+function boots(mat, out) {
+    return { shape: ['X X', 'X X'], key: { X: mat }, out: { id: out, n: 1 } };
 }
 
-export function doCraft(inv, recipe, ctx) {
-    if (!canCraft(inv, recipe, ctx)) return false;
-    for (const ing of recipe.ins) inv.take(ing.id, ing.n);
-    inv.add(recipe.out.id, recipe.out.n);
-    return true;
+export const RECIPES = [
+    // --- basics (fit in 2x2, craftable by hand) ---
+    { shapeless: [6], out: { id: PLANK, n: 4 } }, // log -> planks
+    { shape: ['X', 'X'], key: { X: PLANK }, out: { id: IT.STICK, n: 4 } }, // planks -> sticks
+    { shape: ['C', 'S'], key: { C: IT.COAL, S: IT.STICK }, out: { id: 17, n: 4 } }, // torches
+    { shape: ['XX', 'XX'], key: { X: PLANK }, out: { id: 21, n: 1 } }, // crafting table
+
+    // --- 3x3 structures ---
+    { shape: ['XXX', 'X X', 'XXX'], key: { X: COBBLE }, out: { id: 22, n: 1 } }, // furnace
+    { shape: ['FFF', 'PPP'], key: { F: IT.FIBER, P: PLANK }, out: { id: 24, n: 1 } }, // bed
+    { shape: ['XX', 'XX', 'XX'], key: { X: PLANK }, out: { id: DOOR, n: 3 } }, // door
+    { shape: [' XS', 'X S', ' XS'], key: { X: IT.STICK, S: IT.FIBER }, out: { id: IT.BOW, n: 1 } },
+    { shape: ['C', 'S', 'F'], key: { C: IT.COAL, S: IT.STICK, F: IT.FIBER }, out: { id: IT.ARROW, n: 4 } },
+
+    // --- tools ---
+    pick(PLANK, IT.WOOD_PICK),
+    pick(COBBLE, IT.STONE_PICK),
+    pick(IRON, IT.IRON_PICK),
+    pick(DIAMOND, IT.DIAMOND_PICK),
+    sword(PLANK, IT.WOOD_SWORD),
+    sword(COBBLE, IT.STONE_SWORD),
+    sword(IRON, IT.IRON_SWORD),
+    sword(DIAMOND, IT.DIAMOND_SWORD),
+    axe(PLANK, IT.WOOD_AXE),
+    axe(COBBLE, IT.STONE_AXE),
+    axe(IRON, IT.IRON_AXE),
+    axe(DIAMOND, IT.DIAMOND_AXE),
+
+    // --- armor ---
+    helmet(IRON, IT.IRON_HELMET),
+    chest(IRON, IT.IRON_CHEST),
+    legs(IRON, IT.IRON_LEGS),
+    boots(IRON, IT.IRON_BOOTS),
+    helmet(DIAMOND, IT.DIAMOND_HELMET),
+    chest(DIAMOND, IT.DIAMOND_CHEST),
+    legs(DIAMOND, IT.DIAMOND_LEGS),
+    boots(DIAMOND, IT.DIAMOND_BOOTS),
+
+    // TNT: gunpowder + sand checker
+    { shape: ['GSG', 'SGS', 'GSG'], key: { G: IT.GUNPOWDER, S: 4 }, out: { id: 23, n: 1 } },
+];
+
+// Smelting: input id -> output. Fuel is always coal.
+export const SMELT_FUEL = IT.COAL;
+export const SMELT_RECIPES = [
+    { in: IT.RAW_IRON, out: { id: IT.IRON_INGOT, n: 1 } },
+    { in: IT.RAW_GOLD, out: { id: IT.GOLD_INGOT, n: 1 } },
+    { in: IT.PORKCHOP, out: { id: IT.COOKED_PORKCHOP, n: 1 } },
+    { in: 4, out: { id: 10, n: 1 } }, // sand -> glass
+];
+
+export function smeltOf(id) {
+    return SMELT_RECIPES.find((r) => r.in === id) || null;
+}
+
+// --- shaped pattern helpers ---
+
+// Expand a recipe's shape into a {w, h, rows: id[][]} bounding box (0 = empty).
+function shapeBox(recipe) {
+    if (recipe._box) return recipe._box;
+    const rows = recipe.shape.map((row) =>
+        [...row].map((ch) => (ch === ' ' ? 0 : recipe.key[ch])),
+    );
+    const h = rows.length;
+    const w = Math.max(...rows.map((r) => r.length));
+    const grid = rows.map((r) => {
+        const out = r.slice();
+        while (out.length < w) out.push(0);
+        return out;
+    });
+    recipe._box = { w, h, rows: grid };
+    return recipe._box;
+}
+
+export function recipeMinGrid(recipe) {
+    if (recipe.shapeless) return recipe.shapeless.length <= 4 ? 2 : 3;
+    const { w, h } = shapeBox(recipe);
+    return w <= 2 && h <= 2 ? 2 : 3;
+}
+
+// Trimmed bounding box of the non-empty cells in a size*size grid of ids.
+function trimGrid(cells, size) {
+    let minR = size,
+        maxR = -1,
+        minC = size,
+        maxC = -1;
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            if (cells[r * size + c]) {
+                if (r < minR) minR = r;
+                if (r > maxR) maxR = r;
+                if (c < minC) minC = c;
+                if (c > maxC) maxC = c;
+            }
+        }
+    }
+    if (maxR < 0) return null; // empty grid
+    return { minR, maxR, minC, maxC, w: maxC - minC + 1, h: maxR - minR + 1 };
+}
+
+function matchShaped(recipe, cells, size, box) {
+    const sb = shapeBox(recipe);
+    if (sb.w !== box.w || sb.h !== box.h) return null;
+    const used = new Array(size * size).fill(false);
+    for (let r = 0; r < box.h; r++) {
+        for (let c = 0; c < box.w; c++) {
+            const want = sb.rows[r][c];
+            const idx = (box.minR + r) * size + (box.minC + c);
+            const have = cells[idx];
+            if (want === 0) {
+                if (have !== 0) return null; // extra item where pattern is empty
+            } else {
+                if (have !== want) return null;
+                used[idx] = true;
+            }
+        }
+    }
+    return used;
+}
+
+function matchShapeless(recipe, cells, size) {
+    const want = recipe.shapeless.slice();
+    const used = new Array(size * size).fill(false);
+    const filled = [];
+    for (let i = 0; i < cells.length; i++) if (cells[i]) filled.push(i);
+    if (filled.length !== want.length) return null;
+    for (const idx of filled) {
+        const k = want.indexOf(cells[idx]);
+        if (k < 0) return null;
+        want.splice(k, 1);
+        used[idx] = true;
+    }
+    return want.length === 0 ? used : null;
+}
+
+// cells: id[] of length size*size (0 = empty). Returns { out, used } or null.
+export function matchCraft(cells, size) {
+    const box = trimGrid(cells, size);
+    if (!box) return null;
+    for (const recipe of RECIPES) {
+        if (recipeMinGrid(recipe) > size) continue;
+        const used = recipe.shapeless
+            ? matchShapeless(recipe, cells, size)
+            : matchShaped(recipe, cells, size, box);
+        if (used) return { out: { ...recipe.out }, used };
+    }
+    return null;
+}
+
+// For the recipe book: which cell index gets which id, for a given grid size.
+// Returns Map(cellIndex -> id) placing the recipe top-left, or null if it
+// doesn't fit this grid size.
+export function recipePlacement(recipe, size) {
+    if (recipeMinGrid(recipe) > size) return null;
+    const map = new Map();
+    if (recipe.shapeless) {
+        recipe.shapeless.forEach((id, i) => {
+            const r = Math.floor(i / size),
+                c = i % size;
+            map.set(r * size + c, id);
+        });
+        return map;
+    }
+    const sb = shapeBox(recipe);
+    for (let r = 0; r < sb.h; r++) {
+        for (let c = 0; c < sb.w; c++) {
+            if (sb.rows[r][c]) map.set(r * size + c, sb.rows[r][c]);
+        }
+    }
+    return map;
+}
+
+// Distinct ingredient counts a recipe needs (for "can I auto-fill?" checks).
+export function recipeNeeds(recipe) {
+    const need = new Map();
+    const ids = recipe.shapeless
+        ? recipe.shapeless
+        : [...recipe.shape.join('')].filter((ch) => ch !== ' ').map((ch) => recipe.key[ch]);
+    for (const id of ids) need.set(id, (need.get(id) || 0) + 1);
+    return need;
 }

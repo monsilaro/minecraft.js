@@ -6,6 +6,7 @@ import { fbm2, valueNoise3, hash2, mulberry32 } from '../core/noise.js';
 import { AIR, WATER, BEDROCK, BLOCKS, blockDrops, isSolid } from './blocks.js';
 import { buildChunkGeometry, arraysToGeometry } from './mesher.js';
 import { computeLightRegion } from './lighting.js';
+import { findUnsupportedLeaves } from './leafdecay.js';
 import { CHUNK, HEIGHT, SEA } from './constants.js';
 
 export { CHUNK, HEIGHT, SEA };
@@ -82,6 +83,10 @@ export class World {
         // player-made block edits, by chunk key -> Map(blockIndex -> id).
         // Source of truth for the savegame; applied on top of generation.
         this.allEdits = new Map();
+
+        // leaf decay: leaves cut off from logs disappear gradually
+        this.leafDecayQueue = []; // [{ x, y, z, t }]
+        this.leafDecaySet = new Set(); // queued positions, to avoid duplicates
 
         // shared uniform objects: updating these updates every chunk material
         this.uniforms = {
@@ -254,6 +259,40 @@ export class World {
         for (const [k, pairs] of Object.entries(data)) {
             this.allEdits.set(k, new Map(pairs));
         }
+    }
+
+    // ---- leaf decay ----
+    // A log was broken: queue nearby leaves no longer connected to any log to
+    // vanish gradually (spread across ~0.5–9.5s → all gone within 10s).
+    decayLeavesAround(lx, ly, lz) {
+        const leaves = findUnsupportedLeaves((x, y, z) => this.getBlock(x, y, z), lx, ly, lz);
+        for (const { x, y, z } of leaves) {
+            const kk = x + ',' + y + ',' + z;
+            if (this.leafDecaySet.has(kk)) continue;
+            this.leafDecaySet.add(kk);
+            this.leafDecayQueue.push({ x, y, z, t: 0.5 + Math.random() * 9 });
+        }
+    }
+
+    // Tick the decay timers; remove expired leaves. Returns drop list or null.
+    updateLeafDecay(dt) {
+        if (this.leafDecayQueue.length === 0) return null;
+        const drops = [];
+        const remain = [];
+        for (const e of this.leafDecayQueue) {
+            e.t -= dt;
+            if (e.t > 0) {
+                remain.push(e);
+                continue;
+            }
+            this.leafDecaySet.delete(e.x + ',' + e.y + ',' + e.z);
+            if (this.getBlock(e.x, e.y, e.z) === 7) {
+                this.setBlock(e.x, e.y, e.z, AIR);
+                for (const d of blockDrops(7, Math.random)) drops.push({ x: e.x, y: e.y, z: e.z, ...d });
+            }
+        }
+        this.leafDecayQueue = remain;
+        return drops.length ? drops : null;
     }
 
     // ---- generation ----

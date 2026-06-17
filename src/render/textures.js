@@ -349,6 +349,39 @@ const TILE_PAINTERS = [
         for (let x = 1; x < 5; x++) setHex(px, x, 2, '#f4f4f4'); // pillow peek
         for (let x = 1; x < 5; x++) setHex(px, x, 3, '#e4e4e4');
     },
+    // 32 door upper: plank panel, framed, with a small window
+    (px, rng) => {
+        planksBase(px, rng);
+        for (let i = 0; i < TILE; i++) {
+            setHex(px, 0, i, '#5e4426');
+            setHex(px, 15, i, '#5e4426');
+            setHex(px, i, 0, '#5e4426');
+        }
+        for (let y = 3; y <= 7; y++) for (let x = 6; x <= 10; x++) setHex(px, x, y, '#5e4426');
+        for (let y = 4; y <= 6; y++) for (let x = 7; x <= 9; x++) setPx(px, x, y, 150, 190, 220, 200);
+    },
+    // 33 door lower: plank panel, framed, with a handle on the right
+    (px, rng) => {
+        planksBase(px, rng);
+        for (let i = 0; i < TILE; i++) {
+            setHex(px, 0, i, '#5e4426');
+            setHex(px, 15, i, '#5e4426');
+            setHex(px, i, 15, '#5e4426');
+        }
+        // recessed panel
+        for (let y = 3; y <= 12; y++) {
+            setHex(px, 4, y, '#7a5c33');
+            setHex(px, 11, y, '#7a5c33');
+        }
+        for (let x = 4; x <= 11; x++) {
+            setHex(px, x, 3, '#7a5c33');
+            setHex(px, x, 12, '#7a5c33');
+        }
+        // handle
+        setHex(px, 12, 8, '#2a2a2a');
+        setHex(px, 13, 8, '#1a1a1a');
+        setHex(px, 13, 9, '#1a1a1a');
+    },
 ];
 
 export function createAtlas() {
@@ -445,6 +478,23 @@ function drawSword(px, tier) {
     setHex(px, 2, 13, '#523a20'); // grip
 }
 
+function drawAxe(px, tier) {
+    const [c1, c2] = TIER_COLORS[tier];
+    // diagonal wooden handle, bottom-left to top-right
+    for (let i = 0; i < 9; i++) {
+        setHex(px, 4 + i, 13 - i, '#6b4d2e');
+        setHex(px, 5 + i, 13 - i, '#523a20');
+    }
+    // axe head: a wedge near the top of the handle (left-facing blade)
+    for (let y = 2; y <= 7; y++) {
+        const span = 3 - Math.abs(4 - y); // widest at the middle of the head
+        for (let x = 8 - span; x <= 8; x++) setHex(px, x, y, x <= 8 - span + 1 ? c2 : c1);
+    }
+    setHex(px, 9, 3, c1);
+    setHex(px, 9, 4, c1);
+    setHex(px, 9, 5, c1); // head shoulder against the handle
+}
+
 const ITEM_PAINTERS = {
     [IT.STICK]: (px) => {
         for (let i = 0; i < 9; i++) {
@@ -481,6 +531,10 @@ const ITEM_PAINTERS = {
     [IT.STONE_SWORD]: (px) => drawSword(px, 'stone'),
     [IT.IRON_SWORD]: (px) => drawSword(px, 'iron'),
     [IT.DIAMOND_SWORD]: (px) => drawSword(px, 'diamond'),
+    [IT.WOOD_AXE]: (px) => drawAxe(px, 'wood'),
+    [IT.STONE_AXE]: (px) => drawAxe(px, 'stone'),
+    [IT.IRON_AXE]: (px) => drawAxe(px, 'iron'),
+    [IT.DIAMOND_AXE]: (px) => drawAxe(px, 'diamond'),
     [IT.PORKCHOP]: (px, rng) => {
         blob(px, 9, 7, 4, ['#f2a0a0', '#e88c8c', '#f7b5b5'], rng);
         setHex(px, 4, 12, '#f5efe0');

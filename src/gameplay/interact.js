@@ -2,7 +2,7 @@
 // placing blocks from the inventory, eating food.
 
 import * as THREE from 'three';
-import { AIR, WATER, BLOCKS, blockDrops } from '../world/blocks.js';
+import { AIR, WATER, BLOCKS, blockDrops, isDoor, doorId, doorTop, doorFacing, doorOpen } from '../world/blocks.js';
 import { defOf } from '../items/inventory.js';
 import { IT } from '../items/items.js';
 import { S } from '../audio/sounds.js';
@@ -67,6 +67,7 @@ export class Interaction {
         this.digSoundTimer = 0;
         this.bowCharge = -1; // -1 idle, 0..1 while drawing
         this.onUseBed = null; // cb(x, y, z) wired by main
+        this.onLogBroken = null; // cb(x, y, z) — triggers leaf decay
         this.dir = new THREE.Vector3();
 
         // target highlight
@@ -159,10 +160,16 @@ export class Interaction {
         const hit = this.target();
         if (!hit) return;
 
-        if (hit.id === 21 || hit.id === 22) {
-            // crafting table / furnace: open the recipe book
+        if (hit.id === 21) {
+            // crafting table: open the 3x3 crafting grid
             document.exitPointerLock();
-            this.ui.setInventoryOpen(true, this.craftCtx());
+            this.ui.setInventoryOpen(true, { mode: 'table' });
+            return;
+        }
+        if (hit.id === 22) {
+            // furnace: open the smelting UI
+            document.exitPointerLock();
+            this.ui.setInventoryOpen(true, { mode: 'furnace' });
             return;
         }
 
@@ -176,7 +183,16 @@ export class Interaction {
             return;
         }
 
+        if (isDoor(hit.id)) {
+            this.toggleDoor(hit.x, hit.y, hit.z);
+            return;
+        }
+
         if (!held || held.id >= 100) return; // only blocks are placeable
+        if (BLOCKS[held.id]?.render === 'door') {
+            this.placeDoor(hit);
+            return;
+        }
         const px = hit.x + hit.normal[0];
         const py = hit.y + hit.normal[1];
         const pz = hit.z + hit.normal[2];
@@ -184,6 +200,40 @@ export class Interaction {
         if (current !== AIR && current !== WATER && !BLOCKS[current]?.render) return;
         if (BLOCKS[held.id].solid && this.player.intersectsBlock(px, py, pz)) return;
         this.world.setBlock(px, py, pz, held.id);
+        this.inv.consumeSelected();
+        S.place();
+    }
+
+    // open/close both halves of a door (clicked half can be top or bottom)
+    toggleDoor(x, y, z) {
+        const id = this.world.getBlock(x, y, z);
+        const bottomY = doorTop(id) ? y - 1 : y;
+        const facing = doorFacing(id);
+        const open = !doorOpen(id);
+        if (isDoor(this.world.getBlock(x, bottomY, z)))
+            this.world.setBlock(x, bottomY, z, doorId(facing, open, false));
+        if (isDoor(this.world.getBlock(x, bottomY + 1, z)))
+            this.world.setBlock(x, bottomY + 1, z, doorId(facing, open, true));
+        S.door();
+    }
+
+    // place a 2-tall door at the targeted cell, facing the player
+    placeDoor(hit) {
+        const px = hit.x + hit.normal[0],
+            py = hit.y + hit.normal[1],
+            pz = hit.z + hit.normal[2];
+        for (const yy of [py, py + 1]) {
+            const c = this.world.getBlock(px, yy, pz);
+            if (c !== AIR && c !== WATER && !BLOCKS[c]?.render) return; // need both cells free
+        }
+        if (this.player.intersectsBlock(px, py, pz) || this.player.intersectsBlock(px, py + 1, pz))
+            return;
+        // facing = dominant axis of the player's look direction
+        const fx = -Math.sin(this.player.yaw),
+            fz = -Math.cos(this.player.yaw);
+        const facing = Math.abs(fz) >= Math.abs(fx) ? (fz > 0 ? 0 : 1) : fx > 0 ? 2 : 3;
+        this.world.setBlock(px, py, pz, doorId(facing, false, false));
+        this.world.setBlock(px, py + 1, pz, doorId(facing, false, true));
         this.inv.consumeSelected();
         S.place();
     }
@@ -197,26 +247,6 @@ export class Interaction {
                 return;
             }
         }
-    }
-
-    craftCtx() {
-        const p = this.player.pos;
-        let nearTable = false,
-            nearFurnace = false;
-        for (let dx = -4; dx <= 4; dx++) {
-            for (let dy = -3; dy <= 3; dy++) {
-                for (let dz = -4; dz <= 4; dz++) {
-                    const id = this.world.getBlock(
-                        Math.floor(p.x) + dx,
-                        Math.floor(p.y) + dy,
-                        Math.floor(p.z) + dz,
-                    );
-                    if (id === 21) nearTable = true;
-                    else if (id === 22) nearFurnace = true;
-                }
-            }
-        }
-        return { nearTable, nearFurnace };
     }
 
     // ---- bow ----
@@ -303,7 +333,11 @@ export class Interaction {
         const rightTool = def.tool && heldDef?.tool === def.tool;
         const canHarvest = !def.tool || (rightTool && heldDef.tier >= (def.tier || 1));
         if (!canHarvest) return def.hardness * 5;
-        const speed = rightTool ? heldDef.speed : 1;
+        // required tool speeds it up; fastTool (e.g. axe on wood) speeds it up too
+        // without being required for harvest
+        let speed = 1;
+        if (rightTool) speed = heldDef.speed;
+        else if (def.fastTool && heldDef?.tool === def.fastTool) speed = heldDef.speed;
         return (def.hardness * 1.5) / speed;
     }
 
@@ -314,6 +348,12 @@ export class Interaction {
         const canHarvest = !def.tool || (rightTool && heldDef.tier >= (def.tier || 1));
 
         this.world.setBlock(hit.x, hit.y, hit.z, AIR);
+        // breaking either door half removes the other (it drops a single door)
+        if (isDoor(hit.id)) {
+            const otherY = doorTop(hit.id) ? hit.y - 1 : hit.y + 1;
+            if (isDoor(this.world.getBlock(hit.x, otherY, hit.z)))
+                this.world.setBlock(hit.x, otherY, hit.z, AIR);
+        }
         // a plant sitting on top pops off
         const above = this.world.getBlock(hit.x, hit.y + 1, hit.z);
         if (BLOCKS[above]?.render === 'cross') {
@@ -329,6 +369,7 @@ export class Interaction {
             }
         }
         if (heldDef?.tool && def.hardness > 0) this.inv.wearSelected();
+        if (hit.id === 6 && this.onLogBroken) this.onLogBroken(hit.x, hit.y, hit.z); // log → leaf decay
         S.breakBlock();
         this.resetMining();
     }

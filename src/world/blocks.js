@@ -57,6 +57,7 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 2,
+        fastTool: 'axe',
         tiles: { top: 6, bottom: 6, side: 5 },
     },
     7: {
@@ -72,6 +73,7 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 2,
+        fastTool: 'axe',
         tiles: { top: 8, bottom: 8, side: 8 },
     },
     9: {
@@ -184,6 +186,7 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 2.5,
+        fastTool: 'axe',
         tiles: { top: 23, bottom: 8, side: 24 },
     },
     22: {
@@ -207,12 +210,52 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 0.8,
+        fastTool: 'axe',
         tiles: { top: 30, bottom: 8, side: 31 },
     },
 };
 
 export const TNT = 23;
 export const BED = 24;
+
+// ---- doors ----
+// 16 state ids encode: DOOR_BASE + (top?8:0) + (open?4:0) + facing(0..3).
+// facing 0=+z, 1=-z, 2=+x, 3=-x (the wall a closed door blocks).
+export const DOOR_BASE = 32;
+export const DOOR = DOOR_BASE; // placeable / item id: closed, bottom, facing +z
+const DOOR_TOP_TILE = 32;
+const DOOR_BOT_TILE = 33;
+
+export function isDoor(id) {
+    return id >= DOOR_BASE && id < DOOR_BASE + 16;
+}
+export function doorFacing(id) {
+    return (id - DOOR_BASE) & 3;
+}
+export function doorOpen(id) {
+    return ((id - DOOR_BASE) & 4) !== 0;
+}
+export function doorTop(id) {
+    return ((id - DOOR_BASE) & 8) !== 0;
+}
+export function doorId(facing, open, top) {
+    return DOOR_BASE + (top ? 8 : 0) + (open ? 4 : 0) + (facing & 3);
+}
+
+for (let i = 0; i < 16; i++) {
+    const id = DOOR_BASE + i;
+    const tile = doorTop(id) ? DOOR_TOP_TILE : DOOR_BOT_TILE;
+    BLOCKS[id] = {
+        name: 'Porte en bois',
+        render: 'door',
+        transparent: true, // thin panel: don't cull neighbors
+        solid: !doorOpen(id), // closed blocks movement, open lets you pass
+        hardness: 3,
+        fastTool: 'axe',
+        tiles: { top: tile, bottom: tile, side: tile },
+        drop: () => [{ id: DOOR, n: 1 }],
+    };
+}
 
 // Fast lookup tables (hot paths: lighting BFS, meshing, physics)
 export const OPAQUE_LUT = new Uint8Array(64);
