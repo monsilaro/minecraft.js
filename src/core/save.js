@@ -1,16 +1,67 @@
-// localStorage savegame: world edits (diff vs generation), player vitals,
+// localStorage savegame, 3 independent slots. Each slot stores its own world
+// seed (so maps differ), world edits (diff vs generation), player vitals,
 // inventory/armor, time of day. Auto-saves on an interval and on tab close.
 
-const KEY = 'minecraft-ish-save';
-const VERSION = 1;
+const PREFIX = 'minecraft-ish-save';
+const VERSION = 2;
+export const SLOTS = 3;
+const LEGACY_SEED = 20260609; // the old hardcoded world seed
 
-export function hasSave() {
-    return localStorage.getItem(KEY) !== null;
+function slotKey(i) {
+    return `${PREFIX}-${i}`;
 }
 
-export function loadSave() {
+export function randomSeed() {
+    return (Math.random() * 0x7fffffff) | 0;
+}
+
+// One-time migration: the old single-key save becomes slot 0.
+function migrateLegacy() {
+    const legacy = localStorage.getItem(PREFIX);
+    if (!legacy) return;
     try {
-        const raw = localStorage.getItem(KEY);
+        if (!localStorage.getItem(slotKey(0))) {
+            const data = JSON.parse(legacy);
+            data.v = VERSION;
+            if (data.seed === undefined) data.seed = LEGACY_SEED;
+            if (data.savedAt === undefined) data.savedAt = 0;
+            localStorage.setItem(slotKey(0), JSON.stringify(data));
+        }
+    } catch {
+        /* ignore corrupt legacy save */
+    }
+    localStorage.removeItem(PREFIX);
+}
+
+// Summary of all slots, for the world-select screen.
+export function listSlots() {
+    migrateLegacy();
+    const out = [];
+    for (let i = 0; i < SLOTS; i++) {
+        const raw = localStorage.getItem(slotKey(i));
+        if (!raw) {
+            out.push({ index: i, exists: false });
+            continue;
+        }
+        try {
+            const d = JSON.parse(raw);
+            out.push({
+                index: i,
+                exists: true,
+                savedAt: d.savedAt || 0,
+                seed: d.seed,
+                hp: d.player?.hp,
+            });
+        } catch {
+            out.push({ index: i, exists: false });
+        }
+    }
+    return out;
+}
+
+export function loadSlot(i) {
+    try {
+        const raw = localStorage.getItem(slotKey(i));
         if (!raw) return null;
         const data = JSON.parse(raw);
         if (data.v !== VERSION) return null;
@@ -20,10 +71,12 @@ export function loadSave() {
     }
 }
 
-export function writeSave({ world, player, inv, timeOfDay }) {
+export function writeSlot(i, { world, player, inv, timeOfDay }) {
     try {
         const data = {
             v: VERSION,
+            savedAt: Date.now(),
+            seed: world.seed,
             time: timeOfDay,
             player: {
                 pos: [player.pos.x, player.pos.y, player.pos.z],
@@ -37,7 +90,7 @@ export function writeSave({ world, player, inv, timeOfDay }) {
             inv: inv.serialize(),
             edits: world.serializeEdits(),
         };
-        localStorage.setItem(KEY, JSON.stringify(data));
+        localStorage.setItem(slotKey(i), JSON.stringify(data));
         return true;
     } catch (e) {
         console.warn('save failed', e);
@@ -45,11 +98,12 @@ export function writeSave({ world, player, inv, timeOfDay }) {
     }
 }
 
-export function clearSave() {
-    localStorage.removeItem(KEY);
+export function clearSlot(i) {
+    localStorage.removeItem(slotKey(i));
 }
 
 export function applySave(data, { world, player, inv }) {
+    if (data.seed !== undefined) world.seed = data.seed;
     world.loadEdits(data.edits);
     inv.load(data.inv);
     const p = data.player;

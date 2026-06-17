@@ -144,6 +144,8 @@ export class Player {
             if (this.inWater) {
                 this.vel.y += (k['Space'] ? 16 : -10) * dt;
                 this.vel.y = Math.max(-4, Math.min(5, this.vel.y));
+                // hop out when swimming into shore (climb 1-block ledges)
+                if (k['Space'] && this.hitWall) this.vel.y = JUMP_SPEED;
             } else {
                 this.vel.y -= GRAVITY * dt;
                 if (this.vel.y < TERMINAL) this.vel.y = TERMINAL;

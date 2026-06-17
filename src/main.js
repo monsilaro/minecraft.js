@@ -18,8 +18,8 @@ import { Interaction } from './gameplay/interact.js';
 import { Effects } from './gameplay/effects.js';
 import { Inventory } from './items/inventory.js';
 import { UI } from './ui/hud.js';
-import { S } from './audio/sounds.js';
-import { loadSave, writeSave, clearSave, applySave } from './core/save.js';
+import { S, setVolume, getVolume } from './audio/sounds.js';
+import { listSlots, loadSlot, writeSlot, clearSlot, applySave, randomSeed } from './core/save.js';
 
 const COL_WATER = new THREE.Color(0x2a4a9a);
 
@@ -65,32 +65,108 @@ const interact = new Interaction({
     dom: renderer.domElement,
 });
 
-// ---- savegame: restore world edits + player before first generation ----
-const save = loadSave();
-if (save) {
-    sky.timeOfDay = applySave(save, { world, player, inv });
-    world.pregenerate(player.pos.x, player.pos.z);
-} else {
-    player.findSpawn(); // pure math, picks dry grassy ground before any chunks exist
-    world.pregenerate(player.pos.x, player.pos.z);
-    inv.add(8, 16); // small head start in a fresh world
-}
 player.armorProvider = () => inv;
 
+// ---- world-select screen: pick a slot before generating anything ----
+let currentSlot = null;
+let started = false;
+
 function persist() {
-    writeSave({ world, player, inv, timeOfDay: sky.timeOfDay });
+    if (currentSlot === null) return;
+    writeSlot(currentSlot, { world, player, inv, timeOfDay: sky.timeOfDay });
 }
-setInterval(persist, 10000);
-window.addEventListener('beforeunload', persist);
-document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') persist();
-});
+
+// Restore world edits + player, or seed a fresh world, then begin play.
+function startGame(slot) {
+    currentSlot = slot;
+    const save = loadSlot(slot);
+    if (save) {
+        sky.timeOfDay = applySave(save, { world, player, inv });
+        world.pregenerate(player.pos.x, player.pos.z);
+    } else {
+        world.seed = randomSeed(); // every fresh world gets a different map
+        player.findSpawn(); // pure math, picks dry grassy ground before any chunks exist
+        world.pregenerate(player.pos.x, player.pos.z);
+        inv.add(8, 16); // small head start in a fresh world
+    }
+    document.getElementById('slotpicker').classList.add('hidden');
+    overlay.classList.remove('hidden');
+    started = true;
+
+    setInterval(persist, 10000);
+    window.addEventListener('beforeunload', persist);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') persist();
+    });
+}
+
+function renderSlotPicker() {
+    const cards = document.getElementById('slotcards');
+    cards.innerHTML = '';
+    for (const s of listSlots()) {
+        const card = document.createElement('div');
+        card.className = 'slotcard';
+        const title = document.createElement('h2');
+        title.textContent = `Monde ${s.index + 1}`;
+        card.appendChild(title);
+
+        const info = document.createElement('div');
+        if (s.exists) {
+            info.className = 'meta';
+            const when = s.savedAt ? new Date(s.savedAt).toLocaleString() : 'inconnu';
+            info.innerHTML = `Joué: ${when}<br />Seed: ${s.seed ?? '?'}<br />❤ ${Math.ceil((s.hp ?? 20) / 2)}/10`;
+        } else {
+            info.className = 'empty';
+            info.textContent = '✨ Nouveau monde';
+        }
+        card.appendChild(info);
+
+        const play = document.createElement('button');
+        play.className = 'play';
+        play.textContent = s.exists ? '▶ Jouer' : '✨ Créer';
+        play.addEventListener('click', () => startGame(s.index));
+        card.appendChild(play);
+
+        if (s.exists) {
+            const del = document.createElement('button');
+            del.className = 'del';
+            del.textContent = '🗑 Supprimer';
+            del.addEventListener('click', () => {
+                if (confirm(`Supprimer le Monde ${s.index + 1}?`)) {
+                    clearSlot(s.index);
+                    renderSlotPicker();
+                }
+            });
+            card.appendChild(del);
+        }
+        cards.appendChild(card);
+    }
+}
+renderSlotPicker();
+
+// "Changer de monde": save, then reload for a clean reset back to the picker.
 document.getElementById('newworld').addEventListener('click', (e) => {
     e.stopPropagation();
-    clearSave();
+    persist();
     window.removeEventListener('beforeunload', persist);
     location.reload();
 });
+
+// ---- volume slider (on the play/pause overlay) ----
+const volSlider = document.getElementById('volslider');
+const volVal = document.getElementById('volval');
+function syncVol() {
+    volVal.textContent = `${Math.round(getVolume() * 100)}%`;
+}
+volSlider.value = String(Math.round(getVolume() * 100));
+syncVol();
+volSlider.addEventListener('input', () => {
+    setVolume(Number(volSlider.value) / 100);
+    syncVol();
+});
+// don't let clicks on the slider trigger the overlay's pointer-lock
+volSlider.addEventListener('click', (e) => e.stopPropagation());
+document.getElementById('volume').addEventListener('click', (e) => e.stopPropagation());
 
 // ---- environment shared with mobs / explosions ----
 const env = {
@@ -251,6 +327,10 @@ let frames = 0,
 
 function loop() {
     requestAnimationFrame(loop);
+    if (!started) {
+        renderer.render(scene, camera); // picker DOM covers the canvas
+        return;
+    }
     const dt = Math.min(clock.getDelta(), 0.05);
     const locked = document.pointerLockElement === renderer.domElement;
 
