@@ -19,7 +19,16 @@ import { Effects } from './gameplay/effects.js';
 import { Inventory } from './items/inventory.js';
 import { UI } from './ui/hud.js';
 import { S, setVolume, getVolume } from './audio/sounds.js';
-import { listSlots, loadSlot, writeSlot, clearSlot, applySave, randomSeed } from './core/save.js';
+import {
+    listSlots,
+    loadSlot,
+    writeSlot,
+    clearSlot,
+    applySave,
+    randomSeed,
+    slotExists,
+    backupSlot,
+} from './core/save.js';
 
 const COL_WATER = new THREE.Color(0x2a4a9a);
 
@@ -72,8 +81,8 @@ let currentSlot = null;
 let started = false;
 
 function persist() {
-    if (currentSlot === null) return;
-    writeSlot(currentSlot, { world, player, inv, timeOfDay: sky.timeOfDay });
+    if (currentSlot === null) return false;
+    return writeSlot(currentSlot, { world, player, inv, timeOfDay: sky.timeOfDay });
 }
 
 // Restore world edits + player, or seed a fresh world, then begin play.
@@ -84,6 +93,13 @@ function startGame(slot) {
         sky.timeOfDay = applySave(save, { world, player, inv });
         world.pregenerate(player.pos.x, player.pos.z);
     } else {
+        // A null load on a slot that *has* raw data means it's corrupt or from an
+        // older version. Back it up before the fresh world's first autosave
+        // overwrites it, so no real progress is lost silently.
+        if (slotExists(slot)) {
+            backupSlot(slot);
+            ui.toast('⚠️ Sauvegarde illisible — copie de secours créée');
+        }
         world.seed = randomSeed(); // every fresh world gets a different map
         player.findSpawn(); // pure math, picks dry grassy ground before any chunks exist
         world.pregenerate(player.pos.x, player.pos.z);
@@ -95,7 +111,15 @@ function startGame(slot) {
     S.unlock();
     renderer.domElement.requestPointerLock();
 
-    setInterval(persist, 10000);
+    // Autosave every 10s. If a save fails (e.g. localStorage quota), surface it
+    // once instead of losing progress silently; re-toast only when it flips back
+    // to failing after a success, so we don't spam every tick.
+    let lastSaveOk = true;
+    setInterval(() => {
+        const ok = persist();
+        if (!ok && lastSaveOk) ui.toast('⚠️ Sauvegarde échouée! (espace plein?)');
+        lastSaveOk = ok;
+    }, 10000);
     window.addEventListener('beforeunload', persist);
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'hidden') persist();
@@ -154,6 +178,12 @@ document.getElementById('newworld').addEventListener('click', (e) => {
     location.reload();
 });
 
+// "Sauvegarder": manual save with visible confirmation (autosave already runs).
+document.getElementById('savebtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    ui.toast(persist() ? '💾 Sauvegardé!' : '⚠️ Échec de sauvegarde!');
+});
+
 // "Jour": skip the cycle to noon (brightest) — survive the night
 document.getElementById('setday').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -186,8 +216,12 @@ const env = {
     isNight: false,
     dayFactor: 1,
     damagePlayer(n, fromPos) {
-        player.damage(n, { armored: true });
-        if (fromPos) player.knockback(fromPos.x, fromPos.z);
+        // only play hurt sound + knock back when the hit actually lands
+        // (not during the 0.6s invulnerability window)
+        if (player.damage(n, { armored: true })) {
+            S.hurt();
+            if (fromPos) player.knockback(fromPos.x, fromPos.z);
+        }
     },
     shootArrow(pos, vel) {
         mobs.shootArrow(pos, vel);

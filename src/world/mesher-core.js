@@ -6,7 +6,7 @@
 // light (separate attributes so the shader can scale skylight with the time
 // of day), and cross-rendered blocks (plants, torches).
 
-import { AIR, BLOCKS, isOpaque, doorFacing, doorOpen } from './blocks.js';
+import { AIR, BLOCKS, isOpaque, doorFacing, doorOpen, bedFacing, bedHead, bedDir } from './blocks.js';
 import { tileUV } from './atlas.js';
 import { CHUNK, HEIGHT } from './constants.js';
 
@@ -180,6 +180,10 @@ export function buildChunkArrays(world, chunk, light) {
                     addDoor(transBuf, id, block, wx, y, wz, light);
                     continue;
                 }
+                if (block.render === 'bed') {
+                    addBed(opaqueBuf, id, block, wx, y, wz, light);
+                    continue;
+                }
 
                 const buf = block.transparent ? transBuf : opaqueBuf;
                 for (const face of FACES) {
@@ -334,6 +338,93 @@ function addDoor(buf, id, block, x, y, z, light) {
             buf.uvs.push(uv[0] ? u1 : u0, uv[1] ? v1 : v0);
         }
         buf.quadIndices(false);
+    }
+}
+
+// Emit an axis-aligned box [min..max] (world coords) with flat per-face shade +
+// light, picking each face's tile via tileFor(face). topUV (optional) overrides
+// the +y face's corner UVs (used to rotate the bed's pillow toward its facing).
+// skipDir (optional [dx,dy,dz]) drops the face pointing that way — used to hide
+// the seam face between the two bed halves so they don't z-fight.
+function emitBox(buf, min, max, tileFor, sky, torch, topUV, skipDir) {
+    for (const face of FACES) {
+        if (
+            skipDir &&
+            face.dir[0] === skipDir[0] &&
+            face.dir[1] === skipDir[1] &&
+            face.dir[2] === skipDir[2]
+        )
+            continue;
+        const { u0, v0, u1, v1 } = tileUV(tileFor(face));
+        for (let i = 0; i < 4; i++) {
+            const c = face.corners[i];
+            buf.positions.push(c[0] ? max[0] : min[0], c[1] ? max[1] : min[1], c[2] ? max[2] : min[2]);
+            buf.colors.push(face.shade);
+            buf.sky.push(sky);
+            buf.torch.push(torch);
+            const uv = topUV && face.tile === 'top' ? topUV[i] : face.uvs[i];
+            buf.uvs.push(uv[0] ? u1 : u0, uv[1] ? v1 : v0);
+        }
+        buf.quadIndices(false);
+    }
+}
+
+// +y face corner UVs per bed facing, so the pillow rows of the top tile sit along
+// the +facing (head outer) edge. NB: CanvasTexture has flipY=true, so the pillow
+// (drawn at canvas y0-4) maps to v1, not v0 — these are flipped accordingly.
+const BED_TOP_UV = [
+    [[0, 1], [1, 1], [1, 0], [0, 0]], // +z
+    [[1, 0], [0, 0], [0, 1], [1, 1]], // -z (180°)
+    [[0, 0], [0, 1], [1, 1], [1, 0]], // +x (90°)
+    [[1, 1], [1, 0], [0, 0], [0, 1]], // -x (270°)
+];
+const BED_LEG_H = 0.28;
+const BED_MATT_TOP = 0.5625;
+const BED_LT = 0.16; // leg thickness
+
+// One half of a 2-long bed: mattress slab + 2 legs at its outer end. The head
+// half carries the pillow (top tile 30, UVs rotated toward facing); the foot
+// half is plain blanket (tile 34). The seam face toward the other half is
+// skipped so the two slabs don't z-fight.
+function addBed(buf, id, block, x, y, z, light) {
+    const sky = light.skyAt(x, y, z) / 15;
+    const torch = light.torchAt(x, y, z) / 15;
+    const facing = bedFacing(id);
+    const head = bedHead(id);
+    const [dx, dz] = bedDir(facing); // foot → head direction
+    const matTile = (face) => block.tiles[face.tile]; // top 30/34, bottom 8, side 31
+    const legTile = () => 8; // planks
+    const topUV = head ? BED_TOP_UV[facing] : null; // pillow only on the head half
+
+    // inner seam direction: foot faces +dir toward head; head faces -dir
+    const inner = head ? [-dx, 0, -dz] : [dx, 0, dz];
+
+    // mattress slab (skip the seam face)
+    emitBox(
+        buf,
+        [x, y + BED_LEG_H, z],
+        [x + 1, y + BED_MATT_TOP, z + 1],
+        matTile,
+        sky,
+        torch,
+        topUV,
+        inner,
+    );
+
+    // 2 legs at this half's OUTER short edge (away from the seam = -inner)
+    const e = BED_LT;
+    const legs = [];
+    if (dx !== 0) {
+        // bed runs along x: outer edge is a fixed x, legs vary in z
+        const lx = head ? (dx > 0 ? 1 - e : 0) : dx > 0 ? 0 : 1 - e;
+        legs.push([lx, 0], [lx, 1 - e]);
+    } else {
+        // bed runs along z: outer edge is a fixed z, legs vary in x
+        const lz = head ? (dz > 0 ? 1 - e : 0) : dz > 0 ? 0 : 1 - e;
+        legs.push([0, lz], [1 - e, lz]);
+    }
+    for (const [lx, lz] of legs) {
+        emitBox(buf, [x + lx, y, z + lz], [x + lx + e, y + BED_LEG_H, z + lz + e], legTile, sky, torch, null, null);
     }
 }
 

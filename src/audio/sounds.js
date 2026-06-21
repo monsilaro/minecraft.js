@@ -122,6 +122,11 @@ export const S = {
     mobHit() {
         burst(0.09, 0.12, 380);
     },
+    // sharper, brighter double-tick for critical hits
+    crit() {
+        burst(0.06, 0.13, 560);
+        burst(0.05, 0.1, 760, 0.05);
+    },
     // three soft chews
     eat() {
         burst(0.05, 0.07, 420, 0);

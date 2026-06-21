@@ -382,6 +382,15 @@ const TILE_PAINTERS = [
         setHex(px, 13, 8, '#1a1a1a');
         setHex(px, 13, 9, '#1a1a1a');
     },
+    // 34 bed foot top: red blanket only (no pillow), wood frame rails
+    (px, rng) => {
+        noisyFill(px, rng, ['#b8332a', '#a82c24', '#c43d33']);
+        for (let x = 0; x < TILE; x++) setHex(px, x, 8, '#7e1f18'); // blanket seam
+        for (let i = 0; i < TILE; i++) {
+            setHex(px, 0, i, '#6b4d2e');
+            setHex(px, 15, i, '#6b4d2e'); // wood frame rails
+        }
+    },
 ];
 
 export function createAtlas() {
@@ -691,6 +700,25 @@ ITEM_PAINTERS[IT.DIAMOND_CHEST] = (px) => drawChest(px, 'diamond');
 ITEM_PAINTERS[IT.DIAMOND_LEGS] = (px) => drawLegs(px, 'diamond');
 ITEM_PAINTERS[IT.DIAMOND_BOOTS] = (px) => drawBoots(px, 'diamond');
 
+// side-view bed icon for the hotbar/inventory (block id 24)
+function drawBed(px) {
+    const RED = '#b8332a',
+        RED2 = '#a82c24',
+        WOOD = '#6b4d2e',
+        WOOD2 = '#523a20',
+        WHITE = '#f4f4f4',
+        WHITE2 = '#e4e4e4';
+    for (let y = 12; y <= 14; y++) {
+        setHex(px, 2, y, WOOD);
+        setHex(px, 3, y, WOOD2);
+        setHex(px, 12, y, WOOD);
+        setHex(px, 13, y, WOOD2); // legs
+    }
+    for (let y = 7; y <= 11; y++) for (let x = 1; x <= 14; x++) setHex(px, x, y, (x + y) % 2 ? RED : RED2);
+    for (let x = 1; x <= 14; x++) setHex(px, x, 7, '#c43d33'); // blanket top highlight
+    for (let y = 5; y <= 8; y++) for (let x = 2; x <= 5; x++) setHex(px, x, y, (x + y) % 2 ? WHITE : WHITE2); // pillow
+}
+
 const iconCache = new Map();
 let atlasCanvasRef = null;
 
@@ -705,7 +733,11 @@ export function getItemIcon(id) {
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = false;
 
-    if (id < 100) {
+    if (id === 24) {
+        const img = ctx.createImageData(TILE, TILE);
+        drawBed(img.data);
+        ctx.putImageData(img, 0, 0);
+    } else if (id < 100) {
         const tiles = BLOCKS[id]?.tiles;
         if (tiles && atlasCanvasRef) {
             const t = tiles.side;

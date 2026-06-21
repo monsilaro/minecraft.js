@@ -205,18 +205,55 @@ export const BLOCKS = {
         hardness: 0.3,
         tiles: { top: 29, bottom: 29, side: 28 },
     },
-    24: {
-        name: 'Lit',
-        solid: true,
-        transparent: false,
-        hardness: 0.8,
-        fastTool: 'axe',
-        tiles: { top: 30, bottom: 8, side: 31 },
-    },
 };
 
 export const TNT = 23;
-export const BED = 24;
+
+// ---- bed ----
+// A 2-block-long low mattress-on-legs shape (render: 'bed'). 8 state ids encode
+// BED_BASE + (head?4:0) + facing(0..3). Facing 0=+z,1=-z,2=+x,3=-x is the
+// direction the head (pillow) sits relative to the foot. The placeable / item id
+// is BED (foot, facing 0).
+export const BED_BASE = 24;
+export const BED = BED_BASE;
+
+export function isBed(id) {
+    return id >= BED_BASE && id < BED_BASE + 8;
+}
+export function bedFacing(id) {
+    return (id - BED_BASE) & 3;
+}
+export function bedHead(id) {
+    return ((id - BED_BASE) & 4) !== 0;
+}
+export function bedId(facing, head) {
+    return BED_BASE + (head ? 4 : 0) + (facing & 3);
+}
+// cell offset from foot to head, per facing
+export function bedDir(facing) {
+    return [
+        [0, 1],
+        [0, -1],
+        [1, 0],
+        [-1, 0],
+    ][facing & 3];
+}
+
+for (let head = 0; head < 2; head++) {
+    for (let f = 0; f < 4; f++) {
+        BLOCKS[bedId(f, head)] = {
+            name: 'Lit',
+            render: 'bed',
+            solid: true, // full-voxel collision
+            transparent: true, // low shape: don't let neighbours cull faces against it
+            hardness: 0.8,
+            fastTool: 'axe',
+            // head half shows the pillow (tile 30); foot half is plain blanket (34)
+            tiles: { top: head ? 30 : 34, bottom: 8, side: 31 },
+            drop: () => [{ id: BED, n: 1 }],
+        };
+    }
+}
 
 // ---- doors ----
 // 16 state ids encode: DOOR_BASE + (top?8:0) + (open?4:0) + facing(0..3).

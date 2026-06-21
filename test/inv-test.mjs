@@ -2,7 +2,7 @@
 import { Inventory } from '../src/items/inventory.js';
 import { RECIPES, matchCraft, recipeMinGrid, smeltOf, recipePlacement } from '../src/items/crafting.js';
 import { IT } from '../src/items/items.js';
-import { DOOR, isDoor, doorId, doorFacing, doorOpen, doorTop } from '../src/world/blocks.js';
+import { DOOR, isDoor, doorId, doorFacing, doorOpen, doorTop, BED, isBed, bedId, bedFacing, bedHead } from '../src/world/blocks.js';
 
 const inv = new Inventory();
 let fail = 0;
@@ -54,6 +54,16 @@ check('isDoor false', isDoor(8), false);
 const door = matchCraft([8, 8, 0, 8, 8, 0, 8, 8, 0], 3);
 check('door recipe out', door?.out.id, DOOR);
 check('door recipe count', door?.out.n, 3);
+
+// bed: facing + head bit encoded in the id (BED_BASE + (head?4:0) + facing)
+check('isBed base', isBed(BED), true);
+check('isBed last', isBed(BED + 7), true);
+check('isBed false', isBed(BED + 8), false);
+check('bedId foot facing', bedId(2, false), BED + 2);
+check('bedId head facing', bedId(0, true), BED + 4);
+check('bedHead foot', bedHead(bedId(1, false)), false);
+check('bedHead head', bedHead(bedId(1, true)), true);
+check('bedFacing round-trip', bedFacing(bedId(3, true)), 3);
 
 // recipe book placement
 check('placement planks at cell 0', recipePlacement(RECIPES.find((r) => r.out.id === 8), 2).get(0), 6);

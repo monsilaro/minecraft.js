@@ -9,6 +9,8 @@ import { IT } from '../items/items.js';
 import { raycastVoxel } from '../gameplay/interact.js';
 
 const GRAVITY = 32;
+const STUN_TIME = 0.25; // AI-pause after a hit so the knockback impulse carries
+const KB_BASE = 5.5; // default horizontal knockback impulse (blocks/sec)
 
 function box(w, h, d, color, x, y, z) {
     const m = new THREE.Mesh(
@@ -158,12 +160,18 @@ class Mob {
     update(dt, env) {
         this.attackCd = Math.max(0, this.attackCd - dt);
         this.hurtFlash = Math.max(0, this.hurtFlash - dt);
+        this.stun = Math.max(0, (this.stun || 0) - dt);
         this.soundCd -= dt;
 
-        if (this.type === 'pig') this.updatePig(dt, env);
-        else if (this.type === 'zombie') this.updateZombie(dt, env);
-        else if (this.type === 'skeleton') this.updateSkeleton(dt, env);
-        else this.updateCreeper(dt, env);
+        // While stunned the AI skips movement/attacks so the knockback impulse in
+        // vel actually integrates (otherwise walkToward overwrites it each tick).
+        // Gravity + stepBody below still run, so the mob slides back then recovers.
+        if (this.stun <= 0) {
+            if (this.type === 'pig') this.updatePig(dt, env);
+            else if (this.type === 'zombie') this.updateZombie(dt, env);
+            else if (this.type === 'skeleton') this.updateSkeleton(dt, env);
+            else this.updateCreeper(dt, env);
+        }
 
         this.vel.y -= GRAVITY * dt;
         if (this.vel.y < -60) this.vel.y = -60;
@@ -356,7 +364,7 @@ class Mob {
         }
     }
 
-    hurt(dmg, from, env) {
+    hurt(dmg, from, env, opts = {}) {
         this.hp -= dmg;
         this.hurtFlash = 0.25;
         if (this.type === 'pig') {
@@ -369,9 +377,11 @@ class Mob {
             const dx = this.pos.x - from.x,
                 dz = this.pos.z - from.z;
             const d = Math.hypot(dx, dz) || 1;
-            this.vel.x += (dx / d) * 7;
-            this.vel.z += (dz / d) * 7;
-            this.vel.y = Math.max(this.vel.y, 5.5);
+            const kb = opts.knockback ?? KB_BASE;
+            this.vel.x += (dx / d) * kb;
+            this.vel.z += (dz / d) * kb;
+            this.vel.y = Math.max(this.vel.y, 4.5);
+            this.stun = STUN_TIME; // stagger: pause AI so the impulse lands
         }
         if (this.hp <= 0) {
             this.dead = true;

@@ -224,9 +224,9 @@ export class Player {
     // opts: { bypassInvuln, armored } — armored hits are reduced by worn armor
     // (4% per armor point, capped 80%) and wear the armor down.
     damage(amount, opts = {}) {
-        if (this.dead) return;
+        if (this.dead) return false;
         if (typeof opts === 'boolean') opts = { bypassInvuln: opts };
-        if (!opts.bypassInvuln && this.invuln > 0) return;
+        if (!opts.bypassInvuln && this.invuln > 0) return false;
 
         if (opts.armored && this.armorProvider) {
             const inv = this.armorProvider();
@@ -245,6 +245,7 @@ export class Player {
             this.dead = true;
             if (this.onDeath) this.onDeath();
         }
+        return true;
     }
 
     knockback(fromX, fromZ, force = 8) {

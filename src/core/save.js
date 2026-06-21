@@ -59,6 +59,26 @@ export function listSlots() {
     return out;
 }
 
+// True if the slot holds raw data, regardless of whether it parses or matches
+// the current version. Lets the caller distinguish "empty slot" from
+// "present but unreadable" so a fresh world never clobbers a real save.
+export function slotExists(i) {
+    return localStorage.getItem(slotKey(i)) != null;
+}
+
+// Stash a slot's raw bytes under a sibling "-bak" key before we risk overwriting
+// an unreadable save with a fresh world.
+export function backupSlot(i) {
+    const raw = localStorage.getItem(slotKey(i));
+    if (raw != null) {
+        try {
+            localStorage.setItem(`${slotKey(i)}-bak`, raw);
+        } catch {
+            /* backup is best-effort */
+        }
+    }
+}
+
 export function loadSlot(i) {
     try {
         const raw = localStorage.getItem(slotKey(i));

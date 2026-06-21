@@ -2,13 +2,16 @@
 // placing blocks from the inventory, eating food.
 
 import * as THREE from 'three';
-import { AIR, WATER, BLOCKS, blockDrops, isDoor, doorId, doorTop, doorFacing, doorOpen } from '../world/blocks.js';
+import { AIR, WATER, BLOCKS, blockDrops, isDoor, doorId, doorTop, doorFacing, doorOpen, isBed, bedId, bedFacing, bedHead, bedDir, BED } from '../world/blocks.js';
 import { defOf } from '../items/inventory.js';
 import { IT } from '../items/items.js';
 import { S } from '../audio/sounds.js';
 
 const REACH = 5;
 const FIST_DMG = 1;
+const KB_BASE = 5.5; // base hit knockback (fist)
+const KB_PER_DMG = 0.55; // extra knockback per weapon damage point
+const CRIT_MULT = 1.5; // damage multiplier for a falling (critical) hit
 
 export function raycastVoxel(world, origin, dir, maxDist) {
     let x = Math.floor(origin.x),
@@ -134,9 +137,21 @@ export class Interaction {
             this.attackCd = 0.55;
             const held = this.inv.currentItem();
             const def = held ? defOf(held.id) : null;
-            const dmg = def?.dmg || FIST_DMG;
-            mobHit.mob.hurt(dmg, this.player.pos, { dropManager: this.drops });
-            S.mobHit();
+            let dmg = def?.dmg || FIST_DMG;
+            let kb = KB_BASE + (def?.dmg ?? 0) * KB_PER_DMG;
+            // critical hit: striking while falling (Minecraft-style)
+            const crit = !this.player.onGround && this.player.vel.y < 0;
+            if (crit) {
+                dmg = Math.ceil(dmg * CRIT_MULT);
+                kb *= 1.3;
+            }
+            mobHit.mob.hurt(dmg, this.player.pos, { dropManager: this.drops }, { knockback: kb });
+            if (crit) {
+                mobHit.mob.hurtFlash = 0.4;
+                S.crit();
+            } else {
+                S.mobHit();
+            }
             if (def?.tool) this.inv.wearSelected();
             this.resetMining();
         }
@@ -178,7 +193,7 @@ export class Interaction {
             return;
         }
 
-        if (hit.id === 24 && this.onUseBed) {
+        if (isBed(hit.id) && this.onUseBed) {
             this.onUseBed(hit.x, hit.y, hit.z);
             return;
         }
@@ -191,6 +206,10 @@ export class Interaction {
         if (!held || held.id >= 100) return; // only blocks are placeable
         if (BLOCKS[held.id]?.render === 'door') {
             this.placeDoor(hit);
+            return;
+        }
+        if (held.id === BED) {
+            this.placeBed(hit);
             return;
         }
         const px = hit.x + hit.normal[0];
@@ -234,6 +253,32 @@ export class Interaction {
         const facing = Math.abs(fz) >= Math.abs(fx) ? (fz > 0 ? 0 : 1) : fx > 0 ? 2 : 3;
         this.world.setBlock(px, py, pz, doorId(facing, false, false));
         this.world.setBlock(px, py + 1, pz, doorId(facing, false, true));
+        this.inv.consumeSelected();
+        S.place();
+    }
+
+    // place a 2-cell bed (foot at the target, head one cell toward the player's
+    // look direction so the pillow points away)
+    placeBed(hit) {
+        const px = hit.x + hit.normal[0],
+            py = hit.y + hit.normal[1],
+            pz = hit.z + hit.normal[2];
+        const fx = -Math.sin(this.player.yaw),
+            fz = -Math.cos(this.player.yaw);
+        const facing = Math.abs(fz) >= Math.abs(fx) ? (fz > 0 ? 0 : 1) : fx > 0 ? 2 : 3;
+        const [dx, dz] = bedDir(facing);
+        const hx = px + dx,
+            hz = pz + dz; // head cell
+        for (const [cx, cz] of [
+            [px, pz],
+            [hx, hz],
+        ]) {
+            const c = this.world.getBlock(cx, py, cz);
+            if (c !== AIR && c !== WATER && !BLOCKS[c]?.render) return; // both cells must be free
+            if (this.player.intersectsBlock(cx, py, cz)) return; // bed is solid
+        }
+        this.world.setBlock(px, py, pz, bedId(facing, false)); // foot
+        this.world.setBlock(hx, py, hz, bedId(facing, true)); // head
         this.inv.consumeSelected();
         S.place();
     }
@@ -353,6 +398,14 @@ export class Interaction {
             const otherY = doorTop(hit.id) ? hit.y - 1 : hit.y + 1;
             if (isDoor(this.world.getBlock(hit.x, otherY, hit.z)))
                 this.world.setBlock(hit.x, otherY, hit.z, AIR);
+        }
+        // breaking either bed half removes the other (drops a single bed)
+        if (isBed(hit.id)) {
+            const [dx, dz] = bedDir(bedFacing(hit.id));
+            const s = bedHead(hit.id) ? -1 : 1; // head's other half is back toward the foot
+            const ox = hit.x + dx * s,
+                oz = hit.z + dz * s;
+            if (isBed(this.world.getBlock(ox, hit.y, oz))) this.world.setBlock(ox, hit.y, oz, AIR);
         }
         // a plant sitting on top pops off
         const above = this.world.getBlock(hit.x, hit.y + 1, hit.z);
