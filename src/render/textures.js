@@ -358,7 +358,8 @@ const TILE_PAINTERS = [
             setHex(px, i, 0, '#5e4426');
         }
         for (let y = 3; y <= 7; y++) for (let x = 6; x <= 10; x++) setHex(px, x, y, '#5e4426');
-        for (let y = 4; y <= 6; y++) for (let x = 7; x <= 9; x++) setPx(px, x, y, 150, 190, 220, 200);
+        for (let y = 4; y <= 6; y++)
+            for (let x = 7; x <= 9; x++) setPx(px, x, y, 150, 190, 220, 200);
     },
     // 33 door lower: plank panel, framed, with a handle on the right
     (px, rng) => {
@@ -451,57 +452,187 @@ export function createCrackTextures() {
 
 // ---- item icons (16x16 canvases, cached) ----
 
-const TIER_COLORS = {
-    wood: ['#a0824c', '#8a6d3b'],
-    stone: ['#9e9e9e', '#7d7d7d'],
-    iron: ['#e8e8e8', '#c0c0c0'],
-    diamond: ['#4ee0d6', '#2bbfb5'],
+// ---- tool & weapon shading + 16x16 silhouette maps ----
+// Same idea as vanilla Minecraft: one silhouette per tool, recoloured per tier.
+// '.' transparent · L/M/D = material light/mid/dark · s/k/h = wooden handle
+// · w bowstring · a arrow shaft · t/u arrowhead · f/g fletching
+const TIER_SHADES = {
+    wood: { L: '#c6975a', M: '#a87c43', D: '#7a5630' },
+    stone: { L: '#ababab', M: '#888888', D: '#5c5c5c' },
+    iron: { L: '#f2f2f2', M: '#d4d4d4', D: '#9c9c9c' },
+    gold: { L: '#ffe57a', M: '#f0c020', D: '#b7860c' },
+    diamond: { L: '#9bf3ea', M: '#3fd3c9', D: '#208f8d' },
+    netherite: { L: '#6e626a', M: '#4a4148', D: '#2a242b' },
+};
+const STICK_SHADES = { s: '#9c7a48', k: '#6f5230', h: '#503a20' };
+const EXTRA_SHADES = {
+    w: '#e8e2d0',
+    a: '#a9824a',
+    t: '#dcdcdc',
+    u: '#9a9a9a',
+    f: '#e6dfca',
+    g: '#b0473b',
 };
 
+const TOOL_MAPS = {
+    PICK: [
+        '................',
+        '..MM........MM..',
+        '.MMLM......MLDM.',
+        '.MLMMMMMMMMMMDM.',
+        '..DMMMMMMMMMMD..',
+        '..........MM....',
+        '..........M.....',
+        '..........sk....',
+        '.........sk.....',
+        '........sk......',
+        '.......sk.......',
+        '......sk........',
+        '.....sk.........',
+        '....sk..........',
+        '................',
+        '................',
+    ],
+    SWORD: [
+        '................',
+        '..............L.',
+        '.............LM.',
+        '............LMD.',
+        '...........LMD..',
+        '..........LMD...',
+        '.........LMD....',
+        '........LMD.....',
+        '......DMMMD.....',
+        '.......sk.......',
+        '......sk........',
+        '.....sk.........',
+        '....hk..........',
+        '................',
+        '................',
+        '................',
+    ],
+    AXE: [
+        '................',
+        '......MMM.......',
+        '.....MMMMM......',
+        '....LMMMMD......',
+        '...LMMMMMM......',
+        '....LMMMMMsk....',
+        '.....MMMMsk.....',
+        '........sk......',
+        '.......sk.......',
+        '......sk........',
+        '.....sk.........',
+        '....sk..........',
+        '...sk...........',
+        '................',
+        '................',
+        '................',
+    ],
+    SHOVEL: [
+        '................',
+        '............MM..',
+        '...........LMMD.',
+        '...........LMMD.',
+        '...........MMM..',
+        '...........MM...',
+        '...........sk...',
+        '..........sk....',
+        '.........sk.....',
+        '........sk......',
+        '.......sk.......',
+        '......sk........',
+        '.....sk.........',
+        '....sk..........',
+        '................',
+        '................',
+    ],
+    HOE: [
+        '................',
+        '................',
+        '................',
+        '.....LL.........',
+        '.....MMMMMM.....',
+        '.....MD...M.....',
+        '....MD....M.....',
+        '..........sk....',
+        '.........sk.....',
+        '........sk......',
+        '.......sk.......',
+        '......sk........',
+        '.....sk.........',
+        '....sk..........',
+        '................',
+        '................',
+    ],
+    BOW: [
+        '................',
+        '.........kk.....',
+        '..........wk....',
+        '..........w.k...',
+        '..........w..k..',
+        '..........w..k..',
+        '........f.w..k..',
+        '.taaaaaaa.w..k..',
+        '........f.w..k..',
+        '..........w..k..',
+        '..........w..k..',
+        '..........w.k...',
+        '..........wk....',
+        '.........kk.....',
+        '................',
+        '................',
+    ],
+    ARROW: [
+        '................',
+        '................',
+        '............utt.',
+        '...........tat..',
+        '..........aa....',
+        '.........a......',
+        '........a.......',
+        '.......a........',
+        '......a.........',
+        '.....a..........',
+        '....a...........',
+        '..gfa...........',
+        '.gf.............',
+        '..f.............',
+        '................',
+        '................',
+    ],
+};
+
+function paintMap(px, map, tier) {
+    const mat = tier ? TIER_SHADES[tier] : null;
+    for (let y = 0; y < TILE; y++) {
+        const row = map[y];
+        if (!row) continue;
+        for (let x = 0; x < TILE; x++) {
+            const ch = row[x];
+            if (!ch || ch === '.' || ch === ' ') continue;
+            const hex = (mat && mat[ch]) || STICK_SHADES[ch] || EXTRA_SHADES[ch];
+            if (hex) setHex(px, x, y, hex);
+        }
+    }
+}
+
 function drawPick(px, tier) {
-    const [c1, c2] = TIER_COLORS[tier];
-    // handle
-    for (let i = 0; i < 8; i++) {
-        setHex(px, 4 + i, 12 - i, '#6b4d2e');
-        setHex(px, 5 + i, 12 - i, '#523a20');
-    }
-    // head arc
-    for (let x = 3; x <= 12; x++) setHex(px, x, 3, c1);
-    setHex(px, 2, 4, c2);
-    setHex(px, 13, 4, c2);
-    setHex(px, 2, 5, c2);
-    setHex(px, 13, 5, c2);
-    setHex(px, 2, 6, c2);
-    setHex(px, 13, 6, c2);
+    paintMap(px, TOOL_MAPS.PICK, tier);
 }
-
 function drawSword(px, tier) {
-    const [c1, c2] = TIER_COLORS[tier];
-    for (let i = 0; i < 9; i++) {
-        setHex(px, 5 + i, 11 - i, c1);
-        setHex(px, 6 + i, 11 - i, c2);
-    }
-    setHex(px, 4, 11, '#6b4d2e');
-    setHex(px, 6, 13, '#6b4d2e'); // guard
-    setHex(px, 3, 12, '#523a20');
-    setHex(px, 2, 13, '#523a20'); // grip
+    paintMap(px, TOOL_MAPS.SWORD, tier);
 }
-
 function drawAxe(px, tier) {
-    const [c1, c2] = TIER_COLORS[tier];
-    // diagonal wooden handle, bottom-left to top-right
-    for (let i = 0; i < 9; i++) {
-        setHex(px, 4 + i, 13 - i, '#6b4d2e');
-        setHex(px, 5 + i, 13 - i, '#523a20');
-    }
-    // axe head: a wedge near the top of the handle (left-facing blade)
-    for (let y = 2; y <= 7; y++) {
-        const span = 3 - Math.abs(4 - y); // widest at the middle of the head
-        for (let x = 8 - span; x <= 8; x++) setHex(px, x, y, x <= 8 - span + 1 ? c2 : c1);
-    }
-    setHex(px, 9, 3, c1);
-    setHex(px, 9, 4, c1);
-    setHex(px, 9, 5, c1); // head shoulder against the handle
+    paintMap(px, TOOL_MAPS.AXE, tier);
+}
+// Ready for future tool items (pelle / houe). Wire them up by adding the IDs in
+// src/items/items.js, then ITEM_PAINTERS entries: (px) => drawShovel(px, 'iron') etc.
+function drawShovel(px, tier) {
+    paintMap(px, TOOL_MAPS.SHOVEL, tier);
+}
+function drawHoe(px, tier) {
+    paintMap(px, TOOL_MAPS.HOE, tier);
 }
 
 const ITEM_PAINTERS = {
@@ -593,41 +724,8 @@ const ITEM_PAINTERS = {
             }
         }
     },
-    [IT.ARROW]: (px) => {
-        for (let i = 0; i < 8; i++) setHex(px, 4 + i, 11 - i, '#8a6d3b'); // shaft
-        setHex(px, 12, 3, '#c8c8c8');
-        setHex(px, 13, 2, '#e0e0e0'); // tip
-        setHex(px, 12, 2, '#c8c8c8');
-        setHex(px, 3, 12, '#f0ead6');
-        setHex(px, 2, 13, '#f0ead6'); // fletching
-        setHex(px, 4, 13, '#ded5b8');
-        setHex(px, 3, 14, '#ded5b8');
-    },
-    [IT.BOW]: (px) => {
-        // curved stave
-        for (const [x, y] of [
-            [4, 2],
-            [5, 2],
-            [6, 3],
-            [7, 4],
-            [8, 5],
-            [9, 6],
-            [10, 7],
-            [11, 8],
-            [12, 9],
-            [13, 10],
-            [13, 11],
-            [12, 12],
-        ]) {
-            setHex(px, x, y, '#6b4d2e');
-            setHex(px, x + 1, y + 1, '#523a20');
-        }
-        // string
-        for (let i = 0; i < 10; i++) setHex(px, 3, 3 + i, '#e8e2d0');
-        setHex(px, 4, 3, '#e8e2d0');
-        setHex(px, 4, 13, '#e8e2d0');
-        setHex(px, 12, 13, '#e8e2d0');
-    },
+    [IT.ARROW]: (px) => paintMap(px, TOOL_MAPS.ARROW, null),
+    [IT.BOW]: (px) => paintMap(px, TOOL_MAPS.BOW, null),
 };
 
 function armorColors(tier) {
@@ -700,6 +798,21 @@ ITEM_PAINTERS[IT.DIAMOND_CHEST] = (px) => drawChest(px, 'diamond');
 ITEM_PAINTERS[IT.DIAMOND_LEGS] = (px) => drawLegs(px, 'diamond');
 ITEM_PAINTERS[IT.DIAMOND_BOOTS] = (px) => drawBoots(px, 'diamond');
 
+// gold tools + shovels + hoes (netherite intentionally not wired)
+ITEM_PAINTERS[IT.GOLD_PICK] = (px) => drawPick(px, 'gold');
+ITEM_PAINTERS[IT.GOLD_SWORD] = (px) => drawSword(px, 'gold');
+ITEM_PAINTERS[IT.GOLD_AXE] = (px) => drawAxe(px, 'gold');
+ITEM_PAINTERS[IT.WOOD_SHOVEL] = (px) => drawShovel(px, 'wood');
+ITEM_PAINTERS[IT.STONE_SHOVEL] = (px) => drawShovel(px, 'stone');
+ITEM_PAINTERS[IT.IRON_SHOVEL] = (px) => drawShovel(px, 'iron');
+ITEM_PAINTERS[IT.GOLD_SHOVEL] = (px) => drawShovel(px, 'gold');
+ITEM_PAINTERS[IT.DIAMOND_SHOVEL] = (px) => drawShovel(px, 'diamond');
+ITEM_PAINTERS[IT.WOOD_HOE] = (px) => drawHoe(px, 'wood');
+ITEM_PAINTERS[IT.STONE_HOE] = (px) => drawHoe(px, 'stone');
+ITEM_PAINTERS[IT.IRON_HOE] = (px) => drawHoe(px, 'iron');
+ITEM_PAINTERS[IT.GOLD_HOE] = (px) => drawHoe(px, 'gold');
+ITEM_PAINTERS[IT.DIAMOND_HOE] = (px) => drawHoe(px, 'diamond');
+
 // side-view bed icon for the hotbar/inventory (block id 24)
 function drawBed(px) {
     const RED = '#b8332a',
@@ -714,9 +827,11 @@ function drawBed(px) {
         setHex(px, 12, y, WOOD);
         setHex(px, 13, y, WOOD2); // legs
     }
-    for (let y = 7; y <= 11; y++) for (let x = 1; x <= 14; x++) setHex(px, x, y, (x + y) % 2 ? RED : RED2);
+    for (let y = 7; y <= 11; y++)
+        for (let x = 1; x <= 14; x++) setHex(px, x, y, (x + y) % 2 ? RED : RED2);
     for (let x = 1; x <= 14; x++) setHex(px, x, 7, '#c43d33'); // blanket top highlight
-    for (let y = 5; y <= 8; y++) for (let x = 2; x <= 5; x++) setHex(px, x, y, (x + y) % 2 ? WHITE : WHITE2); // pillow
+    for (let y = 5; y <= 8; y++)
+        for (let x = 2; x <= 5; x++) setHex(px, x, y, (x + y) % 2 ? WHITE : WHITE2); // pillow
 }
 
 const iconCache = new Map();

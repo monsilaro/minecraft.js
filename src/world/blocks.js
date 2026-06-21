@@ -18,6 +18,7 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 0.6,
+        fastTool: 'shovel',
         tiles: { top: 0, bottom: 2, side: 1 },
         drop: () => [{ id: 2, n: 1 }],
     },
@@ -26,6 +27,7 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 0.5,
+        fastTool: 'shovel',
         tiles: { top: 2, bottom: 2, side: 2 },
     },
     3: {
@@ -43,6 +45,7 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 0.5,
+        fastTool: 'shovel',
         tiles: { top: 4, bottom: 4, side: 4 },
     },
     5: {
@@ -105,6 +108,7 @@ export const BLOCKS = {
         solid: true,
         transparent: false,
         hardness: 0.2,
+        fastTool: 'shovel',
         tiles: { top: 13, bottom: 2, side: 14 },
     },
     13: {

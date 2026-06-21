@@ -13,6 +13,7 @@ import { DOOR } from '../world/blocks.js';
 const PLANK = 8,
     COBBLE = 9,
     IRON = IT.IRON_INGOT,
+    GOLD = IT.GOLD_INGOT,
     DIAMOND = IT.DIAMOND;
 
 function pick(mat, out) {
@@ -23,6 +24,12 @@ function sword(mat, out) {
 }
 function axe(mat, out) {
     return { shape: ['XX', 'XS', ' S'], key: { X: mat, S: IT.STICK }, out: { id: out, n: 1 } };
+}
+function shovel(mat, out) {
+    return { shape: ['X', 'S', 'S'], key: { X: mat, S: IT.STICK }, out: { id: out, n: 1 } };
+}
+function hoe(mat, out) {
+    return { shape: ['XX', ' S', ' S'], key: { X: mat, S: IT.STICK }, out: { id: out, n: 1 } };
 }
 function helmet(mat, out) {
     return { shape: ['XXX', 'X X'], key: { X: mat }, out: { id: out, n: 1 } };
@@ -49,7 +56,11 @@ export const RECIPES = [
     { shape: ['FFF', 'PPP'], key: { F: IT.FIBER, P: PLANK }, out: { id: 24, n: 1 } }, // bed
     { shape: ['XX', 'XX', 'XX'], key: { X: PLANK }, out: { id: DOOR, n: 3 } }, // door
     { shape: [' XS', 'X S', ' XS'], key: { X: IT.STICK, S: IT.FIBER }, out: { id: IT.BOW, n: 1 } },
-    { shape: ['C', 'S', 'F'], key: { C: IT.COAL, S: IT.STICK, F: IT.FIBER }, out: { id: IT.ARROW, n: 4 } },
+    {
+        shape: ['C', 'S', 'F'],
+        key: { C: IT.COAL, S: IT.STICK, F: IT.FIBER },
+        out: { id: IT.ARROW, n: 4 },
+    },
 
     // --- tools ---
     pick(PLANK, IT.WOOD_PICK),
@@ -64,6 +75,19 @@ export const RECIPES = [
     axe(COBBLE, IT.STONE_AXE),
     axe(IRON, IT.IRON_AXE),
     axe(DIAMOND, IT.DIAMOND_AXE),
+    pick(GOLD, IT.GOLD_PICK),
+    sword(GOLD, IT.GOLD_SWORD),
+    axe(GOLD, IT.GOLD_AXE),
+    shovel(PLANK, IT.WOOD_SHOVEL),
+    shovel(COBBLE, IT.STONE_SHOVEL),
+    shovel(IRON, IT.IRON_SHOVEL),
+    shovel(GOLD, IT.GOLD_SHOVEL),
+    shovel(DIAMOND, IT.DIAMOND_SHOVEL),
+    hoe(PLANK, IT.WOOD_HOE),
+    hoe(COBBLE, IT.STONE_HOE),
+    hoe(IRON, IT.IRON_HOE),
+    hoe(GOLD, IT.GOLD_HOE),
+    hoe(DIAMOND, IT.DIAMOND_HOE),
 
     // --- armor ---
     helmet(IRON, IT.IRON_HELMET),
@@ -97,9 +121,7 @@ export function smeltOf(id) {
 // Expand a recipe's shape into a {w, h, rows: id[][]} bounding box (0 = empty).
 function shapeBox(recipe) {
     if (recipe._box) return recipe._box;
-    const rows = recipe.shape.map((row) =>
-        [...row].map((ch) => (ch === ' ' ? 0 : recipe.key[ch])),
-    );
+    const rows = recipe.shape.map((row) => [...row].map((ch) => (ch === ' ' ? 0 : recipe.key[ch])));
     const h = rows.length;
     const w = Math.max(...rows.map((r) => r.length));
     const grid = rows.map((r) => {
