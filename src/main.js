@@ -17,6 +17,7 @@ import { MobManager } from './entities/mobs.js';
 import { Interaction } from './gameplay/interact.js';
 import { Effects } from './gameplay/effects.js';
 import { Inventory } from './items/inventory.js';
+import { ITEMS } from './items/items.js';
 import { UI } from './ui/hud.js';
 import { S, setVolume, getVolume } from './audio/sounds.js';
 import {
@@ -284,6 +285,7 @@ heldGroup.position.set(0.42, -0.38, -0.65);
 let heldMesh = null;
 let heldItemMat = null; // material of the held icon plane, or null (blocks/empty)
 let heldId = -2; // sentinel: forces the first refreshHeld() to run
+let heldIsBlade = false; // sword/axe → arc slash instead of a forward jab
 let swingT = 1;
 
 // base colors for the first-person arm; dimmed by daylight each frame
@@ -319,6 +321,8 @@ function refreshHeld() {
     }
     armGroup.visible = id === null; // empty hand → show the bare arm
     heldItemMat = null;
+    const def = id !== null ? ITEMS[id] : null;
+    heldIsBlade = !!(def && (def.tool === 'sword' || def.tool === 'axe'));
     if (id === null) return;
     if (id < 100) {
         heldMesh = new THREE.Mesh(buildBlockItemGeometry(id, 0.4), world.opaqueMaterial);
@@ -433,19 +437,33 @@ function loop() {
         for (const d of leafDrops) drops.spawn(d.x + 0.5, d.y + 0.3, d.z + 0.5, d.id, d.n);
     }
 
-    // held item: forward jab swing + walk bob + bow draw
+    // held item: blades slash in an arc, everything else does a forward jab
     refreshHeld();
     swingT = Math.min(1, swingT + dt * 4);
-    // keep jabbing on a loop while actively mining a block, until it breaks
+    // keep swinging on a loop while actively mining a block, until it breaks
     if (interact.leftDown && interact.mineKey && swingT >= 1) swingT = 0;
     const swing = Math.sin(swingT * Math.PI); // 0..1..0
     const draw = Math.max(0, interact.bowCharge); // pull the bow toward the eye
     const bob =
         Math.sin(performance.now() * 0.008) * 0.012 * Math.hypot(player.vel.x, player.vel.z) * 0.2;
-    heldGroup.rotation.x = -swing * 0.35; // slight pitch; motion is mostly forward
     heldGroup.position.x = 0.42 - draw * 0.18;
-    heldGroup.position.z = -0.65 + draw * 0.22 - swing * 0.35; // thrust forward (jab)
-    heldGroup.position.y = -0.38 + draw * 0.1 + bob - swing * 0.05;
+    if (heldIsBlade) {
+        // diagonal slash: roll the blade up toward the crosshair so the edge
+        // leads the swing instead of poking handle-first. Flip rotation.z's
+        // sign to slash the other diagonal.
+        heldGroup.rotation.z = swing * 1.5;
+        heldGroup.rotation.x = -swing * 0.5; // tip pitches forward into the world
+        heldGroup.rotation.y = swing * 0.3; // blade edge rotates forward
+        heldGroup.position.z = -0.65 - swing * 0.28;
+        heldGroup.position.x = 0.42 - swing * 0.1; // pull toward center across the slash
+        heldGroup.position.y = -0.38 + bob + swing * 0.04;
+    } else {
+        heldGroup.rotation.z = 0;
+        heldGroup.rotation.y = 0;
+        heldGroup.rotation.x = -swing * 0.35; // slight pitch; motion is mostly forward
+        heldGroup.position.z = -0.65 + draw * 0.22 - swing * 0.35; // thrust forward (jab)
+        heldGroup.position.y = -0.38 + draw * 0.1 + bob - swing * 0.05;
+    }
 
     // light the unlit first-person meshes by daylight (no night flash)
     const heldLight = Math.max(0.18, dayFactor);
