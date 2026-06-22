@@ -179,4 +179,10 @@ export const S = {
         burst(0.12, 0.08, 260);
         tone(230, 150, 0.13, 'triangle', 0.06, 0, 0.012);
     },
+    // the Gloom closing in: a low detuned swell with a slow attack
+    gloom() {
+        tone(70, 46, 1.3, 'sine', 0.14, 0, 0.25);
+        tone(104, 69, 1.3, 'sine', 0.07, 0, 0.25);
+        burst(1.1, 0.05, 180, 0, 0.4);
+    },
 };

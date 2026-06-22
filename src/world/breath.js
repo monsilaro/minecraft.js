@@ -32,3 +32,32 @@ export function breathLevel(timeOfDay) {
 export function gloomLineY(gloom, minY, maxY) {
     return minY + (maxY - minY) * gloom;
 }
+
+// ---- The Gloom's bite (survival tuning) ----
+// Below the tideline at high tide, the Gloom drains your life — unless lantern
+// light wards it off. Two escapes mirror the fiction: climb above the line, or
+// stand in light. These constants are the dials; the functions are pure so the
+// damage model can be unit-tested without a world.
+export const GLOOM_BITE_MIN = 0.45; // tide must rise past this before it harms
+export const GLOOM_DEPTH_FULL = 12; // blocks below the line for full intensity
+export const GLOOM_MAX_DPS = 3; // hp/s drained when fully exposed and unlit
+export const GLOOM_SAFE_RADIUS = 7; // search radius (blocks) for protective light
+export const GLOOM_SAFE_LIGHT = 6; // effective light level that holds the Gloom off
+
+// How exposed the player is to the Gloom, 0 (safe) .. 1 (drowning at peak tide).
+// Zero above the tideline or before the tide rises past the bite threshold;
+// scales with both how deep below the line and how high the tide stands.
+export function gloomExposure(playerY, gloom, gloomLineY) {
+    if (gloom <= GLOOM_BITE_MIN) return 0;
+    const depth = gloomLineY - playerY;
+    if (depth <= 0) return 0;
+    const submerged = Math.min(1, depth / GLOOM_DEPTH_FULL);
+    const tide = (gloom - GLOOM_BITE_MIN) / (1 - GLOOM_BITE_MIN);
+    return Math.max(0, Math.min(1, submerged * tide));
+}
+
+// Life drained per second for a given exposure. Lantern light (lit) stops it dead.
+export function gloomDamagePerSecond(exposure, lit) {
+    if (lit || exposure <= 0) return 0;
+    return exposure * GLOOM_MAX_DPS;
+}

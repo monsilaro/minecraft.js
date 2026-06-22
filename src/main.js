@@ -18,6 +18,13 @@ import { Interaction } from './gameplay/interact.js';
 import { Effects } from './gameplay/effects.js';
 import { Inventory } from './items/inventory.js';
 import { ITEMS } from './items/items.js';
+import { EMIT_LUT } from './world/blocks.js';
+import {
+    gloomExposure,
+    gloomDamagePerSecond,
+    GLOOM_SAFE_RADIUS,
+    GLOOM_SAFE_LIGHT,
+} from './world/breath.js';
 import { UI } from './ui/hud.js';
 import { S, setVolume, getVolume } from './audio/sounds.js';
 import {
@@ -403,6 +410,74 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// ---- The Breath bites: the Gloom drains the unlit below the tideline ----
+const gloomVeil = document.getElementById('gloomveil');
+let gloomDmgAccum = 0; // fractional hp carried between frames
+let gloomWarned = false; // one warning per descent into the dark
+let gloomLit = false; // cached light check, refreshed a few times/sec
+let gloomLitTimer = 0;
+let gloomVeilOpacity = 0;
+
+// Is the player in enough lantern light to be safe? Scans nearby emissive
+// blocks (EMIT_LUT) and estimates the level by distance falloff. Cheap: it only
+// runs while actually exposed, and only a few times a second.
+function litAgainstGloom(pos) {
+    const px = Math.floor(pos.x),
+        py = Math.floor(pos.y),
+        pz = Math.floor(pos.z);
+    const R = GLOOM_SAFE_RADIUS;
+    let best = 0;
+    for (let dx = -R; dx <= R; dx++) {
+        for (let dy = -R; dy <= R; dy++) {
+            for (let dz = -R; dz <= R; dz++) {
+                const emit = EMIT_LUT[world.getBlock(px + dx, py + dy, pz + dz)];
+                if (!emit) continue;
+                const level = emit - Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (level > best) {
+                    best = level;
+                    if (best >= GLOOM_SAFE_LIGHT) return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+// Drain life while submerged in Gloom without light, and drive the screen veil.
+function updateGloom(dt) {
+    const exposure = gloomExposure(player.pos.y, env.gloom, env.gloomLineY);
+    let veilTarget = 0;
+    if (exposure > 0 && !player.dead) {
+        gloomLitTimer -= dt;
+        if (gloomLitTimer <= 0) {
+            gloomLit = litAgainstGloom(player.pos);
+            gloomLitTimer = 0.3;
+        }
+        if (gloomLit) {
+            gloomDmgAccum = 0;
+            gloomWarned = false;
+            veilTarget = exposure * 0.18; // light keeps the murk thin
+        } else {
+            veilTarget = exposure * 0.9;
+            gloomDmgAccum += gloomDamagePerSecond(exposure, false) * dt;
+            if (gloomDmgAccum >= 1) {
+                const dmg = Math.floor(gloomDmgAccum);
+                if (player.damage(dmg)) gloomDmgAccum -= dmg; // env damage, no armor
+            }
+            if (!gloomWarned) {
+                gloomWarned = true;
+                ui.toast('🕯️ Les Ténèbres te submergent — trouve la lumière!');
+                S.gloom();
+            }
+        }
+    } else {
+        gloomDmgAccum = 0;
+        gloomWarned = false;
+    }
+    gloomVeilOpacity += (veilTarget - gloomVeilOpacity) * Math.min(1, dt * 3);
+    if (gloomVeil) gloomVeil.style.opacity = gloomVeilOpacity.toFixed(3);
+}
+
 // ---- main loop ----
 const debugEl = document.getElementById('debug');
 const clock = new THREE.Clock();
@@ -431,6 +506,7 @@ function loop() {
 
     const { headInWater } = player.update(dt, locked);
     world.update(player.pos.x, player.pos.z);
+    updateGloom(dt);
     interact.update(dt, locked);
     mobs.update(dt, env);
     drops.update(dt, player, inv, () => S.pickup(), camera, Math.max(dayFactor, 0.3));

@@ -169,6 +169,21 @@
             #vignette.flash {
                 animation: dmg 0.45s ease-out;
             }
+
+            /* the Gloom closing in: a violet murk that thickens at the edges as
+               the Breath submerges you. Sits below #hud so hearts stay readable. */
+            #gloomveil {
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                opacity: 0;
+                background: radial-gradient(
+                    ellipse at center,
+                    rgba(20, 10, 40, 0) 30%,
+                    rgba(22, 8, 46, 0.55) 72%,
+                    rgba(14, 4, 32, 0.92) 100%
+                );
+            }
             @keyframes dmg {
                 0% {
                     opacity: 1;
@@ -610,6 +625,8 @@
             <h1>Tu es mort!</h1>
             <button id="respawnbtn">Réapparaître</button>
         </div>
+
+        <div id="gloomveil"></div>
 
         <div id="hud">
             <div id="crosshair"></div>
