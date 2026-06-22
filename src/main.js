@@ -18,12 +18,13 @@ import { Interaction } from './gameplay/interact.js';
 import { Effects } from './gameplay/effects.js';
 import { Inventory } from './items/inventory.js';
 import { ITEMS } from './items/items.js';
-import { EMIT_LUT } from './world/blocks.js';
+import { EMIT_LUT, BRAZIER } from './world/blocks.js';
 import {
     gloomExposure,
     gloomDamagePerSecond,
     GLOOM_SAFE_RADIUS,
     GLOOM_SAFE_LIGHT,
+    BRAZIER_SAFE_RADIUS,
 } from './world/breath.js';
 import { UI } from './ui/hud.js';
 import { S, setVolume, getVolume } from './audio/sounds.js';
@@ -418,24 +419,25 @@ let gloomLit = false; // cached light check, refreshed a few times/sec
 let gloomLitTimer = 0;
 let gloomVeilOpacity = 0;
 
-// Is the player in enough lantern light to be safe? Scans nearby emissive
-// blocks (EMIT_LUT) and estimates the level by distance falloff. Cheap: it only
-// runs while actually exposed, and only a few times a second.
+// Is the player in enough light to be safe? Scans nearby emissive blocks
+// (EMIT_LUT): a Brazier wards a large guaranteed sphere (the refined upgrade),
+// while a lantern/torch protects by distance falloff. Cheap: it only runs while
+// actually exposed, and only a few times a second.
 function litAgainstGloom(pos) {
     const px = Math.floor(pos.x),
         py = Math.floor(pos.y),
         pz = Math.floor(pos.z);
-    const R = GLOOM_SAFE_RADIUS;
-    let best = 0;
+    const R = BRAZIER_SAFE_RADIUS;
     for (let dx = -R; dx <= R; dx++) {
         for (let dy = -R; dy <= R; dy++) {
             for (let dz = -R; dz <= R; dz++) {
-                const emit = EMIT_LUT[world.getBlock(px + dx, py + dy, pz + dz)];
-                if (!emit) continue;
-                const level = emit - Math.sqrt(dx * dx + dy * dy + dz * dz);
-                if (level > best) {
-                    best = level;
-                    if (best >= GLOOM_SAFE_LIGHT) return true;
+                const id = world.getBlock(px + dx, py + dy, pz + dz);
+                if (!EMIT_LUT[id]) continue;
+                const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (id === BRAZIER) {
+                    if (dist <= BRAZIER_SAFE_RADIUS) return true;
+                } else if (dist <= GLOOM_SAFE_RADIUS && EMIT_LUT[id] - dist >= GLOOM_SAFE_LIGHT) {
+                    return true;
                 }
             }
         }

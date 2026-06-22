@@ -394,6 +394,25 @@ const TILE_PAINTERS = [
             setHex(px, 15, i, '#6b4d2e'); // wood frame rails
         }
     },
+    // 35 brazier: a stone bowl on a stand with a warm flame (light = the resource)
+    (px, rng) => {
+        noisyFill(px, rng, ['#2a2730', '#211e26', '#332f3a']); // dark backdrop (opaque)
+        for (let y = 8; y < TILE; y++)
+            for (let x = 2; x <= 13; x++) setHex(px, x, y, STONE[Math.floor(rng() * STONE.length)]); // bowl/stand
+        for (let x = 2; x <= 13; x++) setHex(px, x, 8, '#46414e'); // rim
+        for (let x = 4; x <= 11; x++) setHex(px, x, 9, rng() < 0.5 ? '#ff8a3a' : '#e85a2a'); // embers
+        const flame = ['#ffd76a', '#ffae3a', '#ff7e2a'];
+        for (let i = 0; i < 30; i++)
+            setHex(
+                px,
+                5 + Math.floor(rng() * 6),
+                2 + Math.floor(rng() * 6),
+                flame[Math.floor(rng() * flame.length)],
+            );
+        setHex(px, 8, 4, '#fff2c0');
+        setHex(px, 7, 5, '#fff2c0');
+        setHex(px, 8, 5, '#ffe9a0'); // bright core
+    },
 ];
 
 export function createAtlas() {
@@ -728,6 +747,19 @@ const ITEM_PAINTERS = {
     },
     [IT.ARROW]: (px) => paintMap(px, TOOL_MAPS.ARROW, null),
     [IT.BOW]: (px) => paintMap(px, TOOL_MAPS.BOW, null),
+    [IT.ESSENCE]: (px, rng) => {
+        // a pale spectral wisp
+        blob(px, 8, 9, 3, ['#9fd8e6', '#7fbcd6', '#bfe8f0'], rng);
+        setHex(px, 8, 5, '#dff4fa');
+        setHex(px, 7, 6, '#cdeaf2');
+        setHex(px, 10, 11, '#7fbcd6');
+    },
+    [IT.LUMEN]: (px, rng) => {
+        // a bright refined orb of light
+        blob(px, 8, 8, 4, ['#ffe9a0', '#ffd76a', '#fff4cf'], rng);
+        setHex(px, 7, 6, '#fffae6');
+        setHex(px, 8, 6, '#fffae6');
+    },
 };
 
 function armorColors(tier) {

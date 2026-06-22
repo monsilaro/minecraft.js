@@ -9,6 +9,8 @@ import {
     gloomDamagePerSecond,
     GLOOM_BITE_MIN,
     GLOOM_MAX_DPS,
+    GLOOM_SAFE_RADIUS,
+    BRAZIER_SAFE_RADIUS,
 } from '../src/world/breath.js';
 import { SEA } from '../src/world/constants.js';
 
@@ -54,6 +56,11 @@ const checks = [
     ['light wards the Gloom off (no damage)', gloomDamagePerSecond(1, true), 0],
     ['unlit full exposure drains max dps', gloomDamagePerSecond(1, false), GLOOM_MAX_DPS],
     ['no damage with no exposure', gloomDamagePerSecond(0, false), 0],
+    [
+        'a Brazier wards a wider sphere than a lantern',
+        BRAZIER_SAFE_RADIUS > GLOOM_SAFE_RADIUS,
+        true,
+    ],
 ];
 
 let fail = 0;

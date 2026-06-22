@@ -41,6 +41,8 @@ export const IT = {
     GUNPOWDER: 135,
     FIBER: 136,
     ARROW: 137,
+    ESSENCE: 138,
+    LUMEN: 139,
     BOW: 124,
     IRON_HELMET: 140,
     IRON_CHEST: 141,
@@ -137,6 +139,8 @@ export const ITEMS = {
     [IT.BONE]: { name: 'Os' },
     [IT.GUNPOWDER]: { name: 'Poudre à canon' },
     [IT.FIBER]: { name: 'Fibre végétale' },
+    [IT.ESSENCE]: { name: 'Essence spectrale' },
+    [IT.LUMEN]: { name: 'Lumen raffiné' },
     [IT.ARROW]: { name: 'Flèche' },
     [IT.BOW]: { name: 'Arc', bow: true, dur: 384 },
 

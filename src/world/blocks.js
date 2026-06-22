@@ -298,6 +298,24 @@ for (let i = 0; i < 16; i++) {
     };
 }
 
+// ---- the Brazier ----
+// A refined light node: a solid, opaque block that emits max light (glowstone
+// pattern — lighting.js seeds the torch BFS from any emitter regardless of
+// opacity). Crafted from refined essence; anchors the safe network against the
+// Gloom with a larger guaranteed radius than a placed lantern.
+export const BRAZIER = 48;
+BLOCKS[BRAZIER] = {
+    name: 'Brasier',
+    solid: true,
+    transparent: false,
+    hardness: 2,
+    tool: 'pick',
+    tier: 1,
+    light: 15,
+    tiles: { top: 35, bottom: 35, side: 35 },
+    drop: () => [{ id: BRAZIER, n: 1 }],
+};
+
 // Fast lookup tables (hot paths: lighting BFS, meshing, physics)
 export const OPAQUE_LUT = new Uint8Array(64);
 export const SOLID_LUT = new Uint8Array(64);

@@ -56,6 +56,10 @@ Mise en place : **Settings → Pages**, choisir la branche `claude/hollow-voxel-
 - Créatures: bêtes des landes (au Reflux) et le **cortège spectral** qui monte
   avec la Respiration (spectres, revenants archers, husks explosifs) — ils se
   dissipent quand les Ténèbres refluent
+- **Boucle de progression**: le cortège spectral lâche de l'**essence**; raffine-la
+  au **Foyer** en *lumen*, fabrique un **Brasier** (nœud de lumière puissant) et
+  pose-le pour étendre ton réseau sûr — une sphère plus large qu'une lanterne que
+  le Gloom ne peut pas envahir
 - TNT avec réactions en chaîne
 - **3 emplacements de sauvegarde**, chacun avec son seed (map différente),
   choisis sur un écran de sélection au démarrage; sauvegarde localStorage

@@ -402,6 +402,8 @@ class Mob {
                 drops = [{ id: IT.BONE, n: roll(2) }];
                 if (Math.random() < 0.7) drops.push({ id: IT.ARROW, n: roll(2) });
             } else if (!this.exploded) drops = [{ id: IT.GUNPOWDER, n: roll(2) }];
+            // the Gloom-born host condenses into essence when slain
+            if (this.spectral && Math.random() < 0.6) drops.push({ id: IT.ESSENCE, n: 1 });
             env.dropManager.scatter(this.pos, drops);
         }
     }

@@ -7,7 +7,7 @@
 // shown.
 
 import { IT } from './items.js';
-import { DOOR } from '../world/blocks.js';
+import { DOOR, BRAZIER } from '../world/blocks.js';
 
 // material tiers for tools/armor, reused across recipes
 const PLANK = 8,
@@ -101,6 +101,14 @@ export const RECIPES = [
 
     // TNT: gunpowder + sand checker
     { shape: ['GSG', 'SGS', 'GSG'], key: { G: IT.GUNPOWDER, S: 4 }, out: { id: 23, n: 1 } },
+
+    // Brazier: refined essence over an iron bowl on a cobble stand — a strong,
+    // permanent light node for the safe network.
+    {
+        shape: [' L ', 'LIL', 'CCC'],
+        key: { L: IT.LUMEN, I: IT.IRON_INGOT, C: COBBLE },
+        out: { id: BRAZIER, n: 1 },
+    },
 ];
 
 // Smelting: input id -> output. Fuel is always coal.
@@ -110,6 +118,7 @@ export const SMELT_RECIPES = [
     { in: IT.RAW_GOLD, out: { id: IT.GOLD_INGOT, n: 1 } },
     { in: IT.PORKCHOP, out: { id: IT.COOKED_PORKCHOP, n: 1 } },
     { in: 4, out: { id: 10, n: 1 } }, // sand -> glass
+    { in: IT.ESSENCE, out: { id: IT.LUMEN, n: 1 } }, // refine essence at the Foyer
 ];
 
 export function smeltOf(id) {

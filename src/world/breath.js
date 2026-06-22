@@ -43,6 +43,7 @@ export const GLOOM_DEPTH_FULL = 12; // blocks below the line for full intensity
 export const GLOOM_MAX_DPS = 3; // hp/s drained when fully exposed and unlit
 export const GLOOM_SAFE_RADIUS = 7; // search radius (blocks) for protective light
 export const GLOOM_SAFE_LIGHT = 6; // effective light level that holds the Gloom off
+export const BRAZIER_SAFE_RADIUS = 9; // a Brazier wards a larger guaranteed sphere
 
 // How exposed the player is to the Gloom, 0 (safe) .. 1 (drowning at peak tide).
 // Zero above the tideline or before the tide rises past the bite threshold;
