@@ -12,6 +12,25 @@ npm run check      # vérification bundle (esbuild)
 npm run format     # prettier
 ```
 
+## Déploiement (GitHub Pages)
+
+Le jeu est 100 % statique (aucun build) — GitHub Pages le sert tel quel. Ce dépôt
+héberge **deux versions à la même source Pages**, distinguées par sous-dossier :
+
+| URL | Version |
+| --- | --- |
+| `…/minecraft.js/` | **Hollow** (racine) — le pivot crépusculaire, la Respiration |
+| `…/minecraft.js/classic/` | **Minecraft-ish** — instantané figé d'avant le pivot |
+
+Pages ne sert qu'une source par dépôt, mais cette source est une branche entière :
+les deux dossiers cohabitent donc sous la même URL racine. Chemins relatifs
+partout → un simple sous-dossier suffit, rien à reconfigurer. Comme les chemins
+diffèrent (`/` vs `/classic/`), les sauvegardes localStorage des deux versions
+restent **séparées**.
+
+Mise en place : **Settings → Pages**, choisir la branche `claude/hollow-voxel-pivot-dhxc7e`
+(dossier `/root`) comme source.
+
 ## Features
 
 - Monde voxel en chunks 16×16×96, streaming infini, génération procédurale
