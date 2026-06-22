@@ -50,15 +50,17 @@ function blob(px, cx, cy, r, palette, rng) {
     }
 }
 
-const GRASS = ['#5d9e3a', '#69b042', '#74bc4c', '#509134'];
-const DIRT = ['#8a6038', '#7a5430', '#936a40', '#6e4b2a'];
-const STONE = ['#8a8a8a', '#7d7d7d', '#959595', '#737373'];
-const SAND = ['#dcd29b', '#d2c78d', '#e3daa7', '#cabf83'];
-const LEAVES = ['#3e7a25', '#356b1f', '#48892d', '#2f6019'];
-const SNOW = ['#f4f8fb', '#e9eff5', '#ffffff', '#dfe8f0'];
-const BEDROCK_C = ['#3a3a3a', '#2c2c2c', '#4a4a4a', '#222222', '#555555'];
-const WATER_C = ['#3b62d9', '#3258c8', '#4570e8', '#2d51bd'];
-const PLANK = ['#b08a4f', '#a67f45', '#bb945a', '#9e7740'];
+// Hollow palette: a twilight, spectral, desaturated world. Teal-grey moss,
+// violet-grey stone, bone sand, indigo "brume" instead of blue water.
+const GRASS = ['#52706a', '#5d7e74', '#6a8a7e', '#46645e'];
+const DIRT = ['#4a4048', '#403742', '#54495a', '#352e3a'];
+const STONE = ['#74707e', '#696572', '#807c8c', '#5f5c69'];
+const SAND = ['#c7bfa8', '#bbb39c', '#d2cbb4', '#aea68f'];
+const LEAVES = ['#3f5e54', '#365049', '#496b5f', '#2c463f'];
+const SNOW = ['#dfe2ee', '#d2d6e6', '#eceffa', '#c8cce0'];
+const BEDROCK_C = ['#2a2730', '#211e26', '#36323e', '#181620', '#423d4c'];
+const WATER_C = ['#4a3f78', '#403669', '#564a88', '#372f5e'];
+const PLANK = ['#8a7560', '#7e6a56', '#94806b', '#73604d'];
 
 // Stone base with mineral specks in clusters.
 function oreTile(px, rng, specks) {
@@ -109,7 +111,7 @@ const TILE_PAINTERS = [
             let x = Math.floor(rng() * TILE),
                 y = Math.floor(rng() * TILE);
             for (let j = 0; j < 3 + Math.floor(rng() * 4); j++) {
-                setHex(px, x, y, '#666666');
+                setHex(px, x, y, '#56525e');
                 x += rng() < 0.5 ? 1 : 0;
                 y += rng() < 0.7 ? 1 : 0;
             }
@@ -155,13 +157,13 @@ const TILE_PAINTERS = [
     (px, rng) => {
         noisyFill(px, rng, LEAVES);
         for (let i = 0; i < 10; i++)
-            setHex(px, Math.floor(rng() * TILE), Math.floor(rng() * TILE), '#1f4a10');
+            setHex(px, Math.floor(rng() * TILE), Math.floor(rng() * TILE), '#243a34');
     },
     // 8 planks
     (px, rng) => planksBase(px, rng),
     // 9 cobblestone
     (px, rng) => {
-        noisyFill(px, rng, ['#5a5a5a', '#525252']);
+        noisyFill(px, rng, ['#56525e', '#4d4a55']);
         const blobs = [
             [3, 3],
             [10, 2],
@@ -224,23 +226,23 @@ const TILE_PAINTERS = [
     // 20 poppy
     (px, rng) => {
         clear(px);
-        for (let y = 8; y < 15; y++) setHex(px, 7, y, '#3f7d2a');
-        setHex(px, 6, 10, '#3f7d2a');
-        setHex(px, 8, 12, '#3f7d2a');
-        blob(px, 7, 5, 2, ['#c62828', '#e53935', '#b71c1c'], rng);
-        setHex(px, 7, 5, '#212121');
+        for (let y = 8; y < 15; y++) setHex(px, 7, y, '#3f5e54');
+        setHex(px, 6, 10, '#3f5e54');
+        setHex(px, 8, 12, '#3f5e54');
+        blob(px, 7, 5, 2, ['#7a3b6e', '#8f4a82', '#632f5a'], rng);
+        setHex(px, 7, 5, '#1a1620');
     },
     // 21 dandelion
     (px, rng) => {
         clear(px);
-        for (let y = 8; y < 15; y++) setHex(px, 8, y, '#3f7d2a');
-        setHex(px, 7, 11, '#3f7d2a');
-        blob(px, 8, 5, 2, ['#ffd600', '#ffea00', '#ffc400'], rng);
+        for (let y = 8; y < 15; y++) setHex(px, 8, y, '#3f5e54');
+        setHex(px, 7, 11, '#3f5e54');
+        blob(px, 8, 5, 2, ['#9fd0c4', '#bfe6da', '#7fb4a6'], rng);
     },
     // 22 tall grass
     (px, rng) => {
         clear(px);
-        const greens = ['#4f8f30', '#5d9e3a', '#447a28'];
+        const greens = ['#52706a', '#5d7e74', '#46645e'];
         for (let i = 0; i < 7; i++) {
             const bx = 2 + Math.floor(rng() * 12);
             const h = 5 + Math.floor(rng() * 7);

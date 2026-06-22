@@ -31,7 +31,7 @@ import {
     backupSlot,
 } from './core/save.js';
 
-const COL_WATER = new THREE.Color(0x2a4a9a);
+const COL_WATER = new THREE.Color(0x2a2050); // submerged in the Brume
 
 // ---- renderer / scene / camera ----
 const renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -40,7 +40,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
+scene.background = new THREE.Color(0x6e7490);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -185,11 +185,11 @@ document.getElementById('savebtn').addEventListener('click', (e) => {
     ui.toast(persist() ? '💾 Sauvegardé!' : '⚠️ Échec de sauvegarde!');
 });
 
-// "Jour": skip the cycle to noon (brightest) — survive the night
+// "Reflux": skip the cycle to noon, where the Gloom recedes — survive the Breath
 document.getElementById('setday').addEventListener('click', (e) => {
     e.stopPropagation();
-    sky.timeOfDay = 0.25; // 0.25 = noon
-    ui.toast('☀️ Il fait jour!');
+    sky.timeOfDay = 0.25; // 0.25 = noon = full Reflux (gloom 0)
+    ui.toast('🌒 Le Reflux! Les Ténèbres refluent.');
 });
 
 // ---- volume slider (in the inventory footer) ----
@@ -216,6 +216,8 @@ const env = {
     sounds: S,
     isNight: false,
     dayFactor: 1,
+    gloom: 0,
+    gloomLineY: 0,
     damagePlayer(n, fromPos) {
         // only play hurt sound + knock back when the hit actually lands
         // (not during the 0.6s invulnerability window)
@@ -418,10 +420,14 @@ function loop() {
     const dt = Math.min(clock.getDelta(), 0.05);
     const locked = document.pointerLockElement === renderer.domElement;
 
-    const { skyColor, dayFactor, isNight } = sky.update(dt, player.pos, camera);
+    const { skyColor, dayFactor, isNight, gloom, gloomLineY } = sky.update(dt, player.pos, camera);
     world.uniforms.uDay.value = dayFactor;
+    world.uniforms.uGloom.value = gloom;
+    world.uniforms.uGloomLineY.value = gloomLineY;
     env.dayFactor = dayFactor;
     env.isNight = isNight;
+    env.gloom = gloom;
+    env.gloomLineY = gloomLineY;
 
     const { headInWater } = player.update(dt, locked);
     world.update(player.pos.x, player.pos.z);
@@ -498,9 +504,18 @@ function loop() {
         frames = 0;
         fpsTimer = 0;
         const p = player.pos;
+        const tide =
+            env.gloom < 0.15
+                ? 'Reflux'
+                : env.gloom > 0.75
+                  ? 'Respiration'
+                  : env.gloom > 0.5
+                    ? 'Marée montante'
+                    : 'Marée';
         debugEl.textContent =
-            `Minecraft-ish  ${fps} fps   ${sky.clockString()}\n` +
+            `Hollow  ${fps} fps   ${sky.clockString()}\n` +
             `XYZ: ${p.x.toFixed(1)} / ${p.y.toFixed(1)} / ${p.z.toFixed(1)}\n` +
+            `Ténèbres: ${tide} ${Math.round(env.gloom * 100)}%  (ligne Y ${env.gloomLineY.toFixed(0)})\n` +
             `Chunks: ${world.countMeshedChunks()} / ${world.chunks.size}   Mobs: ${mobs.mobs.length}   Drops: ${drops.drops.length}` +
             (player.flying ? '\nVOL (F)' : '');
     }

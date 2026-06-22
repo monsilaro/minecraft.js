@@ -59,7 +59,7 @@ export const ITEMS = {
     [IT.IRON_INGOT]: { name: 'Lingot de fer' },
     [IT.RAW_GOLD]: { name: 'Or brut' },
     [IT.GOLD_INGOT]: { name: "Lingot d'or" },
-    [IT.DIAMOND]: { name: 'Diamant' },
+    [IT.DIAMOND]: { name: 'Cristal de mémoire' },
 
     [IT.WOOD_PICK]: { name: 'Pioche en bois', tool: 'pick', tier: 1, speed: 2, dur: 60, dmg: 2 },
     [IT.STONE_PICK]: {
@@ -72,7 +72,7 @@ export const ITEMS = {
     },
     [IT.IRON_PICK]: { name: 'Pioche en fer', tool: 'pick', tier: 3, speed: 6, dur: 251, dmg: 4 },
     [IT.DIAMOND_PICK]: {
-        name: 'Pioche en diamant',
+        name: 'Pioche en cristal',
         tool: 'pick',
         tier: 4,
         speed: 8,
@@ -83,13 +83,13 @@ export const ITEMS = {
     [IT.WOOD_SWORD]: { name: 'Épée en bois', tool: 'sword', speed: 1, dur: 60, dmg: 4 },
     [IT.STONE_SWORD]: { name: 'Épée en pierre', tool: 'sword', speed: 1, dur: 132, dmg: 5 },
     [IT.IRON_SWORD]: { name: 'Épée en fer', tool: 'sword', speed: 1, dur: 251, dmg: 6 },
-    [IT.DIAMOND_SWORD]: { name: 'Épée en diamant', tool: 'sword', speed: 1, dur: 1562, dmg: 7 },
+    [IT.DIAMOND_SWORD]: { name: 'Épée en cristal', tool: 'sword', speed: 1, dur: 1562, dmg: 7 },
 
     [IT.WOOD_AXE]: { name: 'Hache en bois', tool: 'axe', tier: 1, speed: 2, dur: 60, dmg: 3 },
     [IT.STONE_AXE]: { name: 'Hache en pierre', tool: 'axe', tier: 2, speed: 4, dur: 132, dmg: 4 },
     [IT.IRON_AXE]: { name: 'Hache en fer', tool: 'axe', tier: 3, speed: 6, dur: 251, dmg: 5 },
     [IT.DIAMOND_AXE]: {
-        name: 'Hache en diamant',
+        name: 'Hache en cristal',
         tool: 'axe',
         tier: 4,
         speed: 8,
@@ -115,7 +115,7 @@ export const ITEMS = {
     [IT.IRON_SHOVEL]: { name: 'Pelle en fer', tool: 'shovel', tier: 3, speed: 6, dur: 251, dmg: 3 },
     [IT.GOLD_SHOVEL]: { name: 'Pelle en or', tool: 'shovel', tier: 2, speed: 12, dur: 33, dmg: 1 },
     [IT.DIAMOND_SHOVEL]: {
-        name: 'Pelle en diamant',
+        name: 'Pelle en cristal',
         tool: 'shovel',
         tier: 4,
         speed: 8,
@@ -128,7 +128,7 @@ export const ITEMS = {
     [IT.STONE_HOE]: { name: 'Houe en pierre', tool: 'hoe', speed: 1, dur: 132, dmg: 1 },
     [IT.IRON_HOE]: { name: 'Houe en fer', tool: 'hoe', speed: 1, dur: 251, dmg: 1 },
     [IT.GOLD_HOE]: { name: 'Houe en or', tool: 'hoe', speed: 1, dur: 33, dmg: 1 },
-    [IT.DIAMOND_HOE]: { name: 'Houe en diamant', tool: 'hoe', speed: 1, dur: 1562, dmg: 1 },
+    [IT.DIAMOND_HOE]: { name: 'Houe en cristal', tool: 'hoe', speed: 1, dur: 1562, dmg: 1 },
 
     [IT.PORKCHOP]: { name: 'Porc cru', food: 3 },
     [IT.COOKED_PORKCHOP]: { name: 'Porc cuit', food: 8 },
@@ -145,10 +145,10 @@ export const ITEMS = {
     [IT.IRON_CHEST]: { name: 'Plastron en fer', armor: 6, slot: 1, dur: 240 },
     [IT.IRON_LEGS]: { name: 'Jambières en fer', armor: 5, slot: 2, dur: 225 },
     [IT.IRON_BOOTS]: { name: 'Bottes en fer', armor: 2, slot: 3, dur: 195 },
-    [IT.DIAMOND_HELMET]: { name: 'Casque en diamant', armor: 3, slot: 0, dur: 363 },
-    [IT.DIAMOND_CHEST]: { name: 'Plastron en diamant', armor: 8, slot: 1, dur: 528 },
-    [IT.DIAMOND_LEGS]: { name: 'Jambières en diamant', armor: 6, slot: 2, dur: 495 },
-    [IT.DIAMOND_BOOTS]: { name: 'Bottes en diamant', armor: 3, slot: 3, dur: 429 },
+    [IT.DIAMOND_HELMET]: { name: 'Casque en cristal', armor: 3, slot: 0, dur: 363 },
+    [IT.DIAMOND_CHEST]: { name: 'Plastron en cristal', armor: 8, slot: 1, dur: 528 },
+    [IT.DIAMOND_LEGS]: { name: 'Jambières en cristal', armor: 6, slot: 2, dur: 495 },
+    [IT.DIAMOND_BOOTS]: { name: 'Bottes en cristal', armor: 3, slot: 3, dur: 429 },
 };
 
 export function isTool(id) {

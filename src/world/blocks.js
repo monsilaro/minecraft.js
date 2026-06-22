@@ -14,7 +14,7 @@ export const FURNACE = 22;
 export const BLOCKS = {
     0: { name: 'Air', solid: false, transparent: true },
     1: {
-        name: 'Bloc de gazon',
+        name: 'Mousse spectrale',
         solid: true,
         transparent: false,
         hardness: 0.6,
@@ -23,7 +23,7 @@ export const BLOCKS = {
         drop: () => [{ id: 2, n: 1 }],
     },
     2: {
-        name: 'Terre',
+        name: "Terre d'ombre",
         solid: true,
         transparent: false,
         hardness: 0.5,
@@ -31,7 +31,7 @@ export const BLOCKS = {
         tiles: { top: 2, bottom: 2, side: 2 },
     },
     3: {
-        name: 'Pierre',
+        name: 'Pierre du Crépuscule',
         solid: true,
         transparent: false,
         hardness: 1.5,
@@ -41,7 +41,7 @@ export const BLOCKS = {
         drop: () => [{ id: 9, n: 1 }],
     },
     4: {
-        name: 'Sable',
+        name: "Sable d'os",
         solid: true,
         transparent: false,
         hardness: 0.5,
@@ -49,14 +49,14 @@ export const BLOCKS = {
         tiles: { top: 4, bottom: 4, side: 4 },
     },
     5: {
-        name: 'Eau',
+        name: 'Brume',
         solid: false,
         transparent: true,
         liquid: true,
         tiles: { top: 11, bottom: 11, side: 11 },
     },
     6: {
-        name: 'Bûche de chêne',
+        name: 'Bois blême',
         solid: true,
         transparent: false,
         hardness: 2,
@@ -64,7 +64,7 @@ export const BLOCKS = {
         tiles: { top: 6, bottom: 6, side: 5 },
     },
     7: {
-        name: 'Feuilles',
+        name: 'Feuillage spectral',
         solid: true,
         transparent: false,
         hardness: 0.2,
@@ -72,7 +72,7 @@ export const BLOCKS = {
         drop: (r) => (r() < 0.05 ? [{ id: IT.APPLE, n: 1 }] : []),
     },
     8: {
-        name: 'Planches',
+        name: 'Planches pâles',
         solid: true,
         transparent: false,
         hardness: 2,
@@ -80,7 +80,7 @@ export const BLOCKS = {
         tiles: { top: 8, bottom: 8, side: 8 },
     },
     9: {
-        name: 'Pierres taillées',
+        name: 'Pierre du Crépuscule taillée',
         solid: true,
         transparent: false,
         hardness: 2,
@@ -104,7 +104,7 @@ export const BLOCKS = {
         tiles: { top: 12, bottom: 12, side: 12 },
     },
     12: {
-        name: 'Neige',
+        name: 'Givre spectral',
         solid: true,
         transparent: false,
         hardness: 0.2,
@@ -112,7 +112,7 @@ export const BLOCKS = {
         tiles: { top: 13, bottom: 2, side: 14 },
     },
     13: {
-        name: 'Minerai de charbon',
+        name: 'Veine de charbon',
         solid: true,
         transparent: false,
         hardness: 3,
@@ -122,7 +122,7 @@ export const BLOCKS = {
         drop: () => [{ id: IT.COAL, n: 1 }],
     },
     14: {
-        name: 'Minerai de fer',
+        name: 'Veine de fer',
         solid: true,
         transparent: false,
         hardness: 3,
@@ -132,7 +132,7 @@ export const BLOCKS = {
         drop: () => [{ id: IT.RAW_IRON, n: 1 }],
     },
     15: {
-        name: "Minerai d'or",
+        name: "Veine d'or",
         solid: true,
         transparent: false,
         hardness: 3,
@@ -142,7 +142,7 @@ export const BLOCKS = {
         drop: () => [{ id: IT.RAW_GOLD, n: 1 }],
     },
     16: {
-        name: 'Minerai de diamant',
+        name: 'Veine de cristal de mémoire',
         solid: true,
         transparent: false,
         hardness: 3,
@@ -152,7 +152,7 @@ export const BLOCKS = {
         drop: () => [{ id: IT.DIAMOND, n: 1 }],
     },
     17: {
-        name: 'Torche',
+        name: 'Lanterne',
         solid: false,
         transparent: true,
         hardness: 0,
@@ -161,7 +161,7 @@ export const BLOCKS = {
         tiles: { top: 19, bottom: 19, side: 19 },
     },
     18: {
-        name: 'Coquelicot',
+        name: 'Fleur de deuil',
         solid: false,
         transparent: true,
         hardness: 0,
@@ -169,7 +169,7 @@ export const BLOCKS = {
         tiles: { top: 20, bottom: 20, side: 20 },
     },
     19: {
-        name: 'Pissenlit',
+        name: 'Lueur des marais',
         solid: false,
         transparent: true,
         hardness: 0,
@@ -177,7 +177,7 @@ export const BLOCKS = {
         tiles: { top: 21, bottom: 21, side: 21 },
     },
     20: {
-        name: 'Herbes hautes',
+        name: 'Hautes herbes spectrales',
         solid: false,
         transparent: true,
         hardness: 0,
@@ -194,7 +194,7 @@ export const BLOCKS = {
         tiles: { top: 23, bottom: 8, side: 24 },
     },
     22: {
-        name: 'Fourneau',
+        name: 'Le Foyer',
         solid: true,
         transparent: false,
         hardness: 3.5,

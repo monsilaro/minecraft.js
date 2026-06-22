@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Minecraft-ish</title>
+        <title>Hollow</title>
         <style>
             html,
             body {
@@ -475,20 +475,27 @@
                 align-items: center;
                 justify-content: center;
                 gap: 14px;
-                color: #fff;
+                color: #e6e2f0;
                 font-family: 'Segoe UI', monospace;
-                background: rgba(10, 20, 40, 0.92);
+                background: radial-gradient(
+                    ellipse at center,
+                    rgba(34, 24, 56, 0.94),
+                    rgba(8, 6, 18, 0.97)
+                );
                 z-index: 15;
             }
             #slotpicker h1 {
-                font-size: 42px;
+                font-size: 46px;
                 margin: 0;
-                letter-spacing: 4px;
-                text-shadow: 3px 3px 0 #2a5;
+                letter-spacing: 10px;
+                color: #d8cdf0;
+                text-shadow:
+                    0 0 18px rgba(150, 120, 220, 0.7),
+                    3px 3px 0 #2a1d44;
             }
             #slotpicker .pickersub {
                 font-size: 16px;
-                color: #cde;
+                color: #b3a7cc;
                 margin-bottom: 8px;
             }
             #slotcards {
@@ -535,12 +542,12 @@
                 font-family: inherit;
             }
             .slotcard .play {
-                background: #2a7a3a;
+                background: #4a3a72;
                 color: #fff;
-                border: 1px solid #3c9;
+                border: 1px solid #7c6aa8;
             }
             .slotcard .play:hover {
-                background: #38a04c;
+                background: #5e4a90;
             }
             .slotcard .del {
                 background: rgba(120, 40, 40, 0.7);
@@ -580,8 +587,8 @@
     </head>
     <body>
         <div id="slotpicker">
-            <h1>MINECRAFT-ISH</h1>
-            <div class="pickersub">Choisis un monde</div>
+            <h1>HOLLOW</h1>
+            <div class="pickersub">Porte la lanterne. Survis à la Respiration.</div>
             <div id="slotcards"></div>
         </div>
 
@@ -639,13 +646,17 @@
                 </div>
             </div>
             <div id="invfooter">
-                <label id="volume">🔊 <input id="volslider" type="range" min="0" max="100" /><span id="volval"></span></label>
+                <label id="volume"
+                    >🔊 <input id="volslider" type="range" min="0" max="100" /><span
+                        id="volval"
+                    ></span
+                ></label>
                 <div class="ctrl">
                     WASD bouger · Espace sauter · Clic G miner · Clic D placer/manger · E/Tab
                     inventaire · 1-9 hotbar
                 </div>
                 <button id="savebtn">💾 Sauvegarder</button>
-                <button id="setday">☀️ Jour</button>
+                <button id="setday">🌒 Reflux</button>
                 <button id="newworld">🌍 Changer de monde</button>
             </div>
         </div>

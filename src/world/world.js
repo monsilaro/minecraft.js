@@ -38,11 +38,13 @@ const VERT = /* glsl */ `
   varying float vSky;
   varying float vTorch;
   varying float vFogDepth;
+  varying float vWorldY;
   void main() {
     vUv = uv;
     vColor = aColor;
     vSky = aSky;
     vTorch = aTorch;
+    vWorldY = position.y; // mesher emits world-space coords
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     vFogDepth = -mv.z;
     gl_Position = projectionMatrix * mv;
@@ -57,19 +59,31 @@ const FRAG = /* glsl */ `
   uniform vec3 uFogColor;
   uniform float uFogNear;
   uniform float uFogFar;
+  uniform float uGloom;       // 0 Reflux .. 1 Respiration
+  uniform float uGloomLineY;  // world-Y of the rising tideline
   varying vec2 vUv;
   varying float vColor;
   varying float vSky;
   varying float vTorch;
   varying float vFogDepth;
+  varying float vWorldY;
   void main() {
     vec4 tex = texture2D(uMap, vUv);
     if (tex.a < uAlphaTest) discard;
     float light = max(vSky * uDay, vTorch * 1.05);
     light = max(light, 0.04);
-    // torch light warms the color slightly
+    // torch/lantern light warms the color slightly
     vec3 tint = mix(vec3(1.0), vec3(1.0, 0.85, 0.6), clamp(vTorch - vSky * uDay, 0.0, 1.0) * 0.5);
     vec3 col = tex.rgb * vColor * light * tint;
+
+    // The Breath: at high tide the Gloom floods everything below uGloomLineY,
+    // smothering it in violet murk. Lantern light (vTorch) carves out safe
+    // pockets the Gloom can't reach — the lit "network" that holds it back.
+    float submerged = clamp((uGloomLineY - vWorldY) * 0.35, 0.0, 1.0);
+    float safe = clamp(vTorch * 1.7, 0.0, 1.0);
+    float flood = submerged * uGloom * (1.0 - safe);
+    col = mix(col, col * vec3(0.26, 0.20, 0.42), flood * 0.85);
+
     float fogF = smoothstep(uFogNear, uFogFar, vFogDepth);
     gl_FragColor = vec4(mix(col, uFogColor, fogF), tex.a * uOpacity);
   }
@@ -91,9 +105,11 @@ export class World {
         // shared uniform objects: updating these updates every chunk material
         this.uniforms = {
             uDay: { value: 1.0 },
-            uFogColor: { value: new THREE.Color(0x87ceeb) },
+            uFogColor: { value: new THREE.Color(0x6e7490) },
             uFogNear: { value: 60 },
             uFogFar: { value: 150 },
+            uGloom: { value: 0.0 },
+            uGloomLineY: { value: 0.0 },
         };
 
         this.opaqueMaterial = this.makeMaterial(atlasTexture, {
@@ -138,6 +154,8 @@ export class World {
                 uFogColor: this.uniforms.uFogColor,
                 uFogNear: this.uniforms.uFogNear,
                 uFogFar: this.uniforms.uFogFar,
+                uGloom: this.uniforms.uGloom,
+                uGloomLineY: this.uniforms.uGloomLineY,
             },
             transparent,
             side: THREE.DoubleSide,
@@ -288,7 +306,8 @@ export class World {
             this.leafDecaySet.delete(e.x + ',' + e.y + ',' + e.z);
             if (this.getBlock(e.x, e.y, e.z) === 7) {
                 this.setBlock(e.x, e.y, e.z, AIR);
-                for (const d of blockDrops(7, Math.random)) drops.push({ x: e.x, y: e.y, z: e.z, ...d });
+                for (const d of blockDrops(7, Math.random))
+                    drops.push({ x: e.x, y: e.y, z: e.z, ...d });
             }
         }
         this.leafDecayQueue = remain;

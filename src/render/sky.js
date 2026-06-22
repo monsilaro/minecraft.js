@@ -3,12 +3,18 @@
 
 import * as THREE from 'three';
 import { mulberry32 } from '../core/noise.js';
+import { breathLevel, gloomLineY } from '../world/breath.js';
+import { SEA } from '../world/constants.js';
 
-const DAY_LENGTH = 600; // seconds for a full cycle
+const DAY_LENGTH = 300; // seconds for a full Breath cycle (Reflux ↔ Respiration)
 
-const COL_DAY = new THREE.Color(0x87ceeb);
-const COL_SUNSET = new THREE.Color(0xf08a4a);
-const COL_NIGHT = new THREE.Color(0x070b1d);
+// Hollow sky: a perpetual crépuscule. "Day" never climbs to a bright midday —
+// it's a pale, ashen twilight; dusk burns a muted violet ember; night is a deep
+// void. COL_GLOOM is mixed in as the Respiration rises.
+const COL_DAY = new THREE.Color(0x6e7490);
+const COL_SUNSET = new THREE.Color(0x8c566e);
+const COL_NIGHT = new THREE.Color(0x0a0814);
+const COL_GLOOM = new THREE.Color(0x2a1d44);
 
 function makeCloudTexture() {
     const size = 256;
@@ -45,8 +51,8 @@ export class Sky {
         this.timeOfDay = 0.05; // 0 = sunrise, 0.25 = noon, 0.5 = sunset, 0.75 = midnight
         this.color = new THREE.Color();
 
-        this.hemi = new THREE.HemisphereLight(0xcfe8ff, 0x6a553a, 1.0);
-        this.dirLight = new THREE.DirectionalLight(0xfff2d0, 1.6);
+        this.hemi = new THREE.HemisphereLight(0x9aa0c4, 0x40384e, 1.0);
+        this.dirLight = new THREE.DirectionalLight(0xd9d2ec, 1.6);
         this.dirLight.position.set(0.6, 1, 0.3);
         scene.add(this.hemi, this.dirLight);
 
@@ -99,7 +105,7 @@ export class Sky {
     }
 
     // Advance the cycle, move sky objects around the player, scale the lights.
-    // Returns { skyColor, dayFactor, isNight }.
+    // Returns { skyColor, dayFactor, isNight, gloom, gloomLineY }.
     update(dt, playerPos, camera) {
         this.timeOfDay = (this.timeOfDay + dt / DAY_LENGTH) % 1;
         const ang = this.timeOfDay * Math.PI * 2;
@@ -108,10 +114,15 @@ export class Sky {
         // chunk skylight multiplier: full day 1.0, moonlit night ~0.16
         const dayFactor = 0.16 + 0.84 * THREE.MathUtils.smoothstep(sinH, -0.12, 0.25);
 
-        // sky color: night -> sunset -> day
+        // The Breath: gloom 0 at Reflux (noon) → 1 at the Respiration's peak.
+        const gloom = breathLevel(this.timeOfDay);
+
+        // sky color: night -> sunset -> day, then drowned toward violet as the
+        // Gloom rises.
         const f1 = THREE.MathUtils.smoothstep(sinH, -0.3, 0.0);
         const f2 = THREE.MathUtils.smoothstep(sinH, 0.02, 0.3);
         this.color.copy(COL_NIGHT).lerp(COL_SUNSET, f1).lerp(COL_DAY, f2);
+        this.color.lerp(COL_GLOOM, gloom * 0.55);
 
         this.sun.position.set(
             playerPos.x + Math.cos(ang) * 380,
@@ -133,10 +144,17 @@ export class Sky {
         this.cloudTex.offset.x += dt * 0.002;
         this.cloudMat.color.setScalar(0.25 + 0.75 * dayFactor);
 
-        this.hemi.intensity = 0.25 + 0.85 * dayFactor;
-        this.dirLight.intensity = 0.2 + 1.4 * dayFactor;
+        // never reads "full midday": dimmer ceiling keeps the twilight mood
+        this.hemi.intensity = 0.18 + 0.5 * dayFactor;
+        this.dirLight.intensity = 0.12 + 0.7 * dayFactor;
 
-        return { skyColor: this.color, dayFactor, isNight: sinH < -0.05 };
+        return {
+            skyColor: this.color,
+            dayFactor,
+            isNight: sinH < -0.05,
+            gloom,
+            gloomLineY: gloomLineY(gloom, SEA - 8, SEA + 20),
+        };
     }
 
     // "HH:MM" for the debug readout (06:00 = sunrise)
