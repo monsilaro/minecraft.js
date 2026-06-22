@@ -17,10 +17,10 @@ npm run format     # prettier
 Le jeu est 100 % statique (aucun build) — GitHub Pages le sert tel quel. Ce dépôt
 héberge **deux versions à la même source Pages**, distinguées par sous-dossier :
 
-| URL | Version |
-| --- | --- |
-| `…/minecraft.js/` | **Hollow** (racine) — le pivot crépusculaire, la Respiration |
-| `…/minecraft.js/classic/` | **Minecraft-ish** — instantané figé d'avant le pivot |
+| URL                       | Version                                                      |
+| ------------------------- | ------------------------------------------------------------ |
+| `…/minecraft.js/`         | **Hollow** (racine) — le pivot crépusculaire, la Respiration |
+| `…/minecraft.js/classic/` | **Minecraft-ish** — instantané figé d'avant le pivot         |
 
 Pages ne sert qu'une source par dépôt, mais cette source est une branche entière :
 les deux dossiers cohabitent donc sous la même URL racine. Chemins relatifs
@@ -28,8 +28,8 @@ partout → un simple sous-dossier suffit, rien à reconfigurer. Comme les chemi
 diffèrent (`/` vs `/classic/`), les sauvegardes localStorage des deux versions
 restent **séparées**.
 
-Mise en place : **Settings → Pages**, choisir la branche `claude/hollow-voxel-pivot-dhxc7e`
-(dossier `/root`) comme source.
+Mise en place : **Settings → Pages**, choisir la branche `main` (dossier `/root`)
+comme source.
 
 ## Features
 
@@ -40,7 +40,7 @@ Mise en place : **Settings → Pages**, choisir la branche `claude/hollow-voxel-
 - Cycle jour/nuit 10 min: soleil, lune, étoiles, couchers de soleil
 - Survie: santé, faim, noyade, dégâts de chute, régénération, mort avec drop
 - Minage progressif (dureté × outil), paliers d'outils bois→pierre→fer→diamant
-- **Craft en grille style Minecraft**: patterns *shaped*/shapeless dans une grille
+- **Craft en grille style Minecraft**: patterns _shaped_/shapeless dans une grille
   2×2 (à la main) ou 3×3 (établi), slot de sortie calculé, clic droit = poser 1.
   Livre de recettes qui auto-remplit la grille. **Fourneau** dédié (entrée +
   charbon → fonte avec barre de progression)
@@ -57,9 +57,13 @@ Mise en place : **Settings → Pages**, choisir la branche `claude/hollow-voxel-
   avec la Respiration (spectres, revenants archers, husks explosifs) — ils se
   dissipent quand les Ténèbres refluent
 - **Boucle de progression**: le cortège spectral lâche de l'**essence**; raffine-la
-  au **Foyer** en *lumen*, fabrique un **Brasier** (nœud de lumière puissant) et
+  au **Foyer** en _lumen_, fabrique un **Brasier** (nœud de lumière puissant) et
   pose-le pour étendre ton réseau sûr — une sphère plus large qu'une lanterne que
   le Gloom ne peut pas envahir
+- **Attunements**: forge une **Lanterne du porteur** (puis attunée, puis ardente)
+  avec du lumen; tenue en main elle annule la morsure du Gloom — les paliers
+  supérieurs te laissent t'enfoncer dans des Ténèbres plus profondes (au prix de
+  ta main: pas d'arme tant que tu la portes)
 - TNT avec réactions en chaîne
 - **3 emplacements de sauvegarde**, chacun avec son seed (map différente),
   choisis sur un écran de sélection au démarrage; sauvegarde localStorage

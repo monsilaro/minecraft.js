@@ -62,3 +62,10 @@ export function gloomDamagePerSecond(exposure, lit) {
     if (lit || exposure <= 0) return 0;
     return exposure * GLOOM_MAX_DPS;
 }
+
+// A carried (attuned) lantern cancels `bearer` of the raw exposure. At bearer 1.0
+// it's full immunity while held; lower attunements only cover shallow gloom, so
+// deeper/higher-tide regions still bite until you attune further.
+export function mitigatedExposure(exposure, bearer) {
+    return Math.max(0, exposure - bearer);
+}

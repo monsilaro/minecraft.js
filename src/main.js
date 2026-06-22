@@ -22,6 +22,7 @@ import { EMIT_LUT, BRAZIER } from './world/blocks.js';
 import {
     gloomExposure,
     gloomDamagePerSecond,
+    mitigatedExposure,
     GLOOM_SAFE_RADIUS,
     GLOOM_SAFE_LIGHT,
     BRAZIER_SAFE_RADIUS,
@@ -446,30 +447,41 @@ function litAgainstGloom(pos) {
 }
 
 // Drain life while submerged in Gloom without light, and drive the screen veil.
+// A held (attuned) bearer's lantern cancels some/all of the exposure first.
 function updateGloom(dt) {
-    const exposure = gloomExposure(player.pos.y, env.gloom, env.gloomLineY);
+    const held = inv.currentItem();
+    const bearer = (held && ITEMS[held.id]?.bearer) || 0;
+    const rawExposure = gloomExposure(player.pos.y, env.gloom, env.gloomLineY);
+    const exposure = mitigatedExposure(rawExposure, bearer);
     let veilTarget = 0;
-    if (exposure > 0 && !player.dead) {
-        gloomLitTimer -= dt;
-        if (gloomLitTimer <= 0) {
-            gloomLit = litAgainstGloom(player.pos);
-            gloomLitTimer = 0.3;
-        }
-        if (gloomLit) {
+    if (rawExposure > 0 && !player.dead) {
+        if (exposure <= 0) {
+            // the carried lantern fully wards the drain here
             gloomDmgAccum = 0;
             gloomWarned = false;
-            veilTarget = exposure * 0.18; // light keeps the murk thin
+            veilTarget = rawExposure * 0.16;
         } else {
-            veilTarget = exposure * 0.9;
-            gloomDmgAccum += gloomDamagePerSecond(exposure, false) * dt;
-            if (gloomDmgAccum >= 1) {
-                const dmg = Math.floor(gloomDmgAccum);
-                if (player.damage(dmg)) gloomDmgAccum -= dmg; // env damage, no armor
+            gloomLitTimer -= dt;
+            if (gloomLitTimer <= 0) {
+                gloomLit = litAgainstGloom(player.pos);
+                gloomLitTimer = 0.3;
             }
-            if (!gloomWarned) {
-                gloomWarned = true;
-                ui.toast('🕯️ Les Ténèbres te submergent — trouve la lumière!');
-                S.gloom();
+            if (gloomLit) {
+                gloomDmgAccum = 0;
+                gloomWarned = false;
+                veilTarget = rawExposure * 0.18; // placed light keeps the murk thin
+            } else {
+                veilTarget = rawExposure * 0.9;
+                gloomDmgAccum += gloomDamagePerSecond(exposure, false) * dt;
+                if (gloomDmgAccum >= 1) {
+                    const dmg = Math.floor(gloomDmgAccum);
+                    if (player.damage(dmg)) gloomDmgAccum -= dmg; // env damage, no armor
+                }
+                if (!gloomWarned) {
+                    gloomWarned = true;
+                    ui.toast('🕯️ Les Ténèbres te submergent — trouve la lumière!');
+                    S.gloom();
+                }
             }
         }
     } else {

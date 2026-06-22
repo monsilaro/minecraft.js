@@ -847,6 +847,34 @@ ITEM_PAINTERS[IT.IRON_HOE] = (px) => drawHoe(px, 'iron');
 ITEM_PAINTERS[IT.GOLD_HOE] = (px) => drawHoe(px, 'gold');
 ITEM_PAINTERS[IT.DIAMOND_HOE] = (px) => drawHoe(px, 'diamond');
 
+// bearer's lanterns — brighter frame + core per attunement tier
+ITEM_PAINTERS[IT.LANTERN_1] = (px) => drawLantern(px, '#d9a24a', '#6b5a3a', '#ffe6a0');
+ITEM_PAINTERS[IT.LANTERN_2] = (px) => drawLantern(px, '#ffcf6a', '#9a8240', '#fff2c0');
+ITEM_PAINTERS[IT.LANTERN_3] = (px) => {
+    drawLantern(px, '#ffe18a', '#cbb15a', '#ffffff');
+    setHex(px, 6, 5, '#7df0ea'); // memory-crystal glints
+    setHex(px, 9, 10, '#7df0ea');
+};
+
+// Bearer's lantern icon: a glowing core in a frame, brighter per attunement.
+function drawLantern(px, core, frame, spark) {
+    setHex(px, 7, 1, frame);
+    setHex(px, 8, 1, frame); // hook
+    setHex(px, 6, 2, frame);
+    setHex(px, 9, 2, frame);
+    for (let x = 5; x <= 10; x++) setHex(px, x, 3, frame); // cap
+    for (let y = 4; y <= 11; y++) {
+        for (let x = 5; x <= 10; x++) setHex(px, x, y, x === 5 || x === 10 ? frame : core); // glass
+    }
+    for (let x = 5; x <= 10; x++) setHex(px, x, 12, frame); // base
+    setHex(px, 5, 13, frame);
+    setHex(px, 10, 13, frame);
+    setHex(px, 7, 7, spark);
+    setHex(px, 8, 7, spark);
+    setHex(px, 7, 8, spark);
+    setHex(px, 8, 8, spark); // flame
+}
+
 // side-view bed icon for the hotbar/inventory (block id 24)
 function drawBed(px) {
     const RED = '#b8332a',

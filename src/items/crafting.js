@@ -109,6 +109,16 @@ export const RECIPES = [
         key: { L: IT.LUMEN, I: IT.IRON_INGOT, C: COBBLE },
         out: { id: BRAZIER, n: 1 },
     },
+
+    // Bearer's lanterns: a carried light, attuned with lumen, that wards the
+    // Gloom's drain. Each tier folds the previous one in with more lumen; the
+    // ardent (top) tier needs a memory crystal.
+    { shapeless: [17, IT.LUMEN, IT.LUMEN], out: { id: IT.LANTERN_1, n: 1 } },
+    { shapeless: [IT.LANTERN_1, IT.LUMEN, IT.LUMEN, IT.LUMEN], out: { id: IT.LANTERN_2, n: 1 } },
+    {
+        shapeless: [IT.LANTERN_2, IT.LUMEN, IT.LUMEN, IT.LUMEN, DIAMOND],
+        out: { id: IT.LANTERN_3, n: 1 },
+    },
 ];
 
 // Smelting: input id -> output. Fuel is always coal.

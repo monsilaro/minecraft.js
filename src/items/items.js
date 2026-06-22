@@ -33,6 +33,9 @@ export const IT = {
     IRON_HOE: 182,
     GOLD_HOE: 183,
     DIAMOND_HOE: 184,
+    LANTERN_1: 190,
+    LANTERN_2: 191,
+    LANTERN_3: 192,
     PORKCHOP: 130,
     COOKED_PORKCHOP: 131,
     FLESH: 132,
@@ -141,6 +144,13 @@ export const ITEMS = {
     [IT.FIBER]: { name: 'Fibre végétale' },
     [IT.ESSENCE]: { name: 'Essence spectrale' },
     [IT.LUMEN]: { name: 'Lumen raffiné' },
+
+    // Bearer's lanterns: held (not placed), they ward the Gloom's drain. `bearer`
+    // is how much gloom exposure the carried light cancels (1.0 = full immunity
+    // while held). Higher attunements let you wade into deeper, higher-tide gloom.
+    [IT.LANTERN_1]: { name: 'Lanterne du porteur', bearer: 0.34 },
+    [IT.LANTERN_2]: { name: 'Lanterne attunée', bearer: 0.6 },
+    [IT.LANTERN_3]: { name: 'Lanterne ardente', bearer: 1.0 },
     [IT.ARROW]: { name: 'Flèche' },
     [IT.BOW]: { name: 'Arc', bow: true, dur: 384 },
 
@@ -166,5 +176,5 @@ export function isArmor(id) {
 }
 
 export function stackSize(id) {
-    return isTool(id) ? 1 : 64;
+    return isTool(id) || ITEMS[id]?.bearer ? 1 : 64;
 }

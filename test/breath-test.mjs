@@ -7,6 +7,7 @@ import {
     smoothstep,
     gloomExposure,
     gloomDamagePerSecond,
+    mitigatedExposure,
     GLOOM_BITE_MIN,
     GLOOM_MAX_DPS,
     GLOOM_SAFE_RADIUS,
@@ -61,6 +62,11 @@ const checks = [
         BRAZIER_SAFE_RADIUS > GLOOM_SAFE_RADIUS,
         true,
     ],
+
+    // --- bearer's lantern attunement ---
+    ['low attunement leaves deep gloom biting', mitigatedExposure(0.8, 0.34), 0.46],
+    ['low attunement fully wards shallow gloom', mitigatedExposure(0.3, 0.34), 0],
+    ['full attunement = immunity while held', mitigatedExposure(1, 1), 0],
 ];
 
 let fail = 0;
