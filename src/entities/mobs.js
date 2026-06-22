@@ -1,6 +1,9 @@
-// Mobs: pigs (passive, day), zombies (melee, night, burn at dawn), skeletons
-// (ranged, night, burn at dawn), creepers (fuse + explosion, persist in day).
-// Plus the arrow projectiles skeletons fire.
+// Mobs (Hollow): moor-beasts (passive, roam at the Reflux) and the spectral host
+// that rises with the Respiration — wraiths (melee), revenant archers (ranged),
+// and husks that burst. Spectres wither when the Gloom recedes. Internally the
+// types keep their engine names (pig/zombie/skeleton/creeper) so the AI, drops
+// and physics are unchanged — only the look + lifecycle are re-skinned. Plus the
+// arrow projectiles the revenant archers fire.
 
 import * as THREE from 'three';
 import { stepBody, rayVsAABB } from '../core/physics.js';
@@ -23,9 +26,9 @@ function box(w, h, d, color, x, y, z) {
 
 function buildPig() {
     const g = new THREE.Group();
-    const pink = 0xeda3a3,
-        dark = 0xd98f8f,
-        snout = 0xc97777;
+    const pink = 0xc7b0b0,
+        dark = 0xb09a9a,
+        snout = 0x9c8585;
     g.add(box(0.58, 0.45, 0.9, pink, 0, 0.62, 0));
     const head = box(0.42, 0.42, 0.4, pink, 0, 0.72, 0.62);
     head.add(box(0.2, 0.14, 0.06, snout, 0, -0.05, 0.23));
@@ -46,9 +49,9 @@ function buildPig() {
 
 function buildZombie() {
     const g = new THREE.Group();
-    const skin = 0x55944a,
-        shirt = 0x3a7a8c,
-        pants = 0x4a3f8a;
+    const skin = 0x7fa39a,
+        shirt = 0x39476a,
+        pants = 0x2e2a4a;
     g.add(box(0.5, 0.68, 0.26, shirt, 0, 1.08, 0));
     g.add(box(0.42, 0.42, 0.42, skin, 0, 1.66, 0));
     g.add(box(0.16, 0.16, 0.6, skin, -0.34, 1.32, 0.3));
@@ -64,8 +67,8 @@ function buildZombie() {
 
 function buildSkeleton() {
     const g = new THREE.Group();
-    const boneC = 0xd8d8d0,
-        dark = 0xb8b8b0;
+    const boneC = 0xcfd4e4,
+        dark = 0xa6abc2;
     g.add(box(0.4, 0.66, 0.2, boneC, 0, 1.1, 0));
     g.add(box(0.4, 0.4, 0.4, boneC, 0, 1.66, 0));
     g.add(box(0.12, 0.12, 0.5, dark, -0.28, 1.34, 0.22)); // arms holding bow
@@ -82,8 +85,8 @@ function buildSkeleton() {
 
 function buildCreeper() {
     const g = new THREE.Group();
-    const green = 0x55b04a,
-        dark = 0x3f8f38;
+    const green = 0x5a978c,
+        dark = 0x3f6e66;
     g.add(box(0.5, 0.9, 0.3, green, 0, 0.85, 0));
     const head = box(0.46, 0.46, 0.46, green, 0, 1.55, 0);
     // the iconic sad face, in dark green
@@ -124,6 +127,7 @@ class Mob {
         this.wanderTimer = 0;
         this.wanderDir = null;
         this.fuse = -1; // creeper
+        this.spectral = type !== 'pig'; // the Gloom-born host has a faint cold glow
 
         let b;
         if (type === 'pig') {
@@ -194,13 +198,16 @@ class Mob {
                 Math.sin(this.animTime + (i % 2) * Math.PI) * 0.7 * Math.min(1, speed);
         }
 
-        // hurt flash / creeper fuse flash
+        // hurt flash / creeper fuse flash, else a faint spectral glow so the
+        // Gloom-born host shimmers in the dark (and reads against the murk)
         const flash =
             this.hurtFlash > 0
                 ? 0x882222
                 : this.fuse >= 0 && Math.floor(this.fuse * 8) % 2 === 0
                   ? 0x999999
-                  : 0x000000;
+                  : this.spectral
+                    ? 0x14243c
+                    : 0x000000;
         this.group.traverse((o) => {
             if (o.isMesh) o.material.emissive.setHex(flash);
         });
@@ -246,8 +253,9 @@ class Mob {
         }
     }
 
-    burnInDaylight(dt, env) {
-        if (env.dayFactor > 0.6) {
+    // Spectral things unravel when the Gloom recedes: at the Reflux they wither.
+    witherInReflux(dt, env) {
+        if ((env.gloom ?? 0) < 0.25) {
             this.burnTimer += dt;
             if (this.burnTimer >= 1) {
                 this.burnTimer = 0;
@@ -266,7 +274,7 @@ class Mob {
     }
 
     updateZombie(dt, env) {
-        this.burnInDaylight(dt, env);
+        this.witherInReflux(dt, env);
         const p = env.player;
         const dist = this.pos.distanceTo(p.pos);
         if (!p.dead && (dist < 16 || this.aggro)) {
@@ -286,7 +294,7 @@ class Mob {
     }
 
     updateSkeleton(dt, env) {
-        this.burnInDaylight(dt, env);
+        this.witherInReflux(dt, env);
         const p = env.player;
         const dist = this.pos.distanceTo(p.pos);
 
@@ -534,7 +542,12 @@ export class MobManager {
         const hostiles = this.mobs.length - pigs;
 
         if (pigs < 8 && env.dayFactor > 0.5) this.trySpawnOne('pig', p, true);
-        if (hostiles < 12 && env.isNight) {
+        // The spectral host rises with the Respiration: none at the Reflux, a
+        // swarm at peak tide. Both the population cap and the spawn chance scale
+        // with the Gloom level.
+        const gloom = env.gloom ?? 0;
+        const cap = Math.floor(gloom * 14);
+        if (gloom > 0.35 && hostiles < cap) {
             const r = Math.random();
             const type = r < 0.45 ? 'zombie' : r < 0.75 ? 'skeleton' : 'creeper';
             this.trySpawnOne(type, p, false);

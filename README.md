@@ -49,8 +49,13 @@ Mise en place : **Settings → Pages**, choisir la branche `claude/hollow-voxel-
 - **Décroissance des feuilles**: coupe le tronc et le feuillage déconnecté tombe
   graduellement (≤10 s), avec chance de pomme
 - Armure fer/diamant: 4 slots, réduction de dégâts, durabilité
-- Mobs: cochons (jour), zombies / squelettes archers / creepers (nuit) —
-  les morts-vivants brûlent à l'aube
+- **La Respiration** (signature de Hollow): une marée de Ténèbres monte et reflue
+  sur le cycle du ciel. À marée haute le Gloom inonde les vallées sous la ligne de
+  marée et **draine la vie** hors de la lumière — fuis vers les hauteurs ou pose
+  des lanternes pour découper des zones sûres
+- Créatures: bêtes des landes (au Reflux) et le **cortège spectral** qui monte
+  avec la Respiration (spectres, revenants archers, husks explosifs) — ils se
+  dissipent quand les Ténèbres refluent
 - TNT avec réactions en chaîne
 - **3 emplacements de sauvegarde**, chacun avec son seed (map différente),
   choisis sur un écran de sélection au démarrage; sauvegarde localStorage
